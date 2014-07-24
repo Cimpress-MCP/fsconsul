@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
@@ -22,11 +21,6 @@ type WatchConfig struct {
 	Path       string
 }
 
-var (
-	// Regexp for invalid characters in keys
-	InvalidRegexp = regexp.MustCompile(`[^a-zA-Z0-9_]`)
-)
-
 // Connects to Consul and watches a given K/V prefix and uses that to
 // write to the filesystem.
 func watchAndExec(config *WatchConfig) (int, error) {
@@ -38,6 +32,13 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+  
+  // If the config path is lacking a trailing separator, add it.
+  if config.Path[len(config.Path)-1] != os.PathSeparator {
+    config.Path += string(os.PathSeparator);
+  }
+  
+  isWindows := os.PathSeparator != '/'
 
 	// Start the watcher goroutine that watches for changes in the
 	// K/V and notifies us on a channel.
@@ -83,8 +84,12 @@ func watchAndExec(config *WatchConfig) (int, error) {
       // Write file to disk
       fmt.Printf("%s=%s\n", k, v)
       
-      // TODO: Add OS-appropriate delimiter to config.Path if not present
       keyfile := fmt.Sprintf("%s%s", config.Path, k)
+      
+      // if Windows, replace / with windows path delimiter
+      if isWindows {
+        keyfile = strings.Replace(keyfile, "/", "\\", -1)
+      }
       
       // TODO: Scream bloody murder if this fails
       // mkdirp the file's path
