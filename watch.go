@@ -74,8 +74,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			continue
 		}
 
-		// Kind of dangerous if config.Path is /
-		// fmt.Printf("%s\n", config.Path)
 		// Blocked by KV().List bug, will not rebuild unless all keys deleted atm.
 		if _, err := os.Stat(config.Path); err == nil {
 			os.RemoveAll(config.Path)
