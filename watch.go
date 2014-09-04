@@ -1,14 +1,14 @@
 package main
 
 import (
-  "fmt"
+	"fmt"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
 	"time"
 
-  "github.com/armed/mkdirp"
+	"github.com/armed/mkdirp"
 	"github.com/armon/consul-api"
 )
 
@@ -32,13 +32,13 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-  
-  // If the config path is lacking a trailing separator, add it.
-  if config.Path[len(config.Path)-1] != os.PathSeparator {
-    config.Path += string(os.PathSeparator);
-  }
-  
-  isWindows := os.PathSeparator != '/'
+
+	// If the config path is lacking a trailing separator, add it.
+	if config.Path[len(config.Path)-1] != os.PathSeparator {
+		config.Path += string(os.PathSeparator)
+	}
+
+	isWindows := os.PathSeparator != '/'
 
 	// Start the watcher goroutine that watches for changes in the
 	// K/V and notifies us on a channel.
@@ -57,6 +57,11 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// to occur.
 		select {
 		case pairs = <-pairCh:
+			fmt.Printf("--- Received new pair(s):")
+			for _, pair := range pairs {
+				fmt.Printf(" [%s]", pair.Key)
+			}
+			fmt.Printf("\n")
 		case err := <-errCh:
 			return 0, err
 		}
@@ -74,45 +79,58 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			continue
 		}
 
+		fmt.Printf("env: %s  newEnv: %s\n", env, newEnv)
+
+		// Kind of dangerous if config.Path is /
+		// fmt.Printf("%s\n", config.Path)
+		// Blocked by KV().List bug, will not rebuild unless all keys deleted atm.
+		if _, err := os.Stat(config.Path); err == nil {
+			os.RemoveAll(config.Path)
+			mkdirp.Mk(config.Path, 0777)
+			fmt.Println("Tree rebuild triggered")
+		} 
+
 		// Replace the env so we can detect future changes
 		env = newEnv
 
-    fmt.Println(newEnv)
+		fmt.Println(newEnv)
 
-    // Write the updated keys to the filesystem at the specified path
+		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
-      // Write file to disk
-      fmt.Printf("%s=%s\n", k, v)
-      
-      keyfile := fmt.Sprintf("%s%s", config.Path, k)
-      
-      // if Windows, replace / with windows path delimiter
-      if isWindows {
-        keyfile = strings.Replace(keyfile, "/", "\\", -1)
-      }
-      
-      // TODO: Scream bloody murder if this fails
-      // mkdirp the file's path
-      mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
-      
-      f, err := os.Create(keyfile)
-      if err != nil {
-        fmt.Printf("Failed to create file %s due to %s\n", keyfile, err)
-        continue
-      }
-      
-      defer f.Close()
-      
-      wrote, err := f.WriteString(v)
-      if err != nil {
-        fmt.Printf("Failed to write value %s to file %s due to %s\n", v, keyfile, err)
-        continue
-      }
-      
-      fmt.Printf("Successfully wrote %d bytes to %s\n", wrote, keyfile)
-      
-      f.Sync()
-    }
+			// Write file to disk
+			fmt.Printf("%s=%s\n", k, v)
+
+			keyfile := fmt.Sprintf("%s%s", config.Path, k)
+
+			// if Windows, replace / with windows path delimiter
+			if isWindows {
+				keyfile = strings.Replace(keyfile, "/", "\\", -1)
+			}
+			
+
+			// TODO: Scream bloody murder if this fails
+			// mkdirp the file's path
+			// Does this work on windows since its checking for / and not \
+			mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
+
+			f, err := os.Create(keyfile)
+			if err != nil {
+				fmt.Printf("Failed to create file %s due to %s\n", keyfile, err)
+				continue
+			}
+
+			defer f.Close()
+
+			wrote, err := f.WriteString(v)
+			if err != nil {
+				fmt.Printf("Failed to write value %s to file %s due to %s\n", v, keyfile, err)
+				continue
+			}
+
+			fmt.Printf("Successfully wrote %d bytes to %s\n", wrote, keyfile)
+
+			f.Sync()
+		}
 
 		// Configuration changed, run our onchange command.
 		var cmd = exec.Command(config.OnChange[0], config.OnChange[1:]...)
@@ -135,8 +153,8 @@ func watch(
 	errCh chan<- error,
 	quitCh <-chan struct{}) {
 
-  // Create the root for KVs, if necessary
-  mkdirp.Mk(path, 0777)
+	// Create the root for KVs, if necessary
+	mkdirp.Mk(path, 0777)
 
 	// Get the initial list of k/v pairs. We don't do a retryableList
 	// here because we want a fast fail if the initial request fails.
@@ -166,6 +184,7 @@ func watch(
 			})
 
 		pairCh <- pairs
+		fmt.Printf("curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
 		curIndex = meta.LastIndex
 	}
 }
