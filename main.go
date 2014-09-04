@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 )
@@ -28,12 +29,22 @@ func realMain() int {
 		return 1
 	}
 
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		return 112
+	}
+	fmt.Printf("fsconsul root path: %s%sfsconsul\n", usr.HomeDir, string(os.PathSeparator)) 
+
 	args := flag.Args()
+
+	localPath := fmt.Sprintf("%s%sfsconsul%s", usr.HomeDir, string(os.PathSeparator), args[1]) 
+
 	config := WatchConfig{
 		ConsulAddr: consulAddr,
 		ConsulDC:   consulDC,
 		OnChange:   args[2:],
-		Path:       args[1],
+		Path:       localPath,
 		Prefix:     args[0],
 	}
 	result, err := watchAndExec(&config)
