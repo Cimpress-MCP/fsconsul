@@ -57,11 +57,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// to occur.
 		select {
 		case pairs = <-pairCh:
-			fmt.Printf("--- Received new pair(s):")
-			for _, pair := range pairs {
-				fmt.Printf(" [%s]", pair.Key)
-			}
-			fmt.Printf("\n")
 		case err := <-errCh:
 			return 0, err
 		}
@@ -78,8 +73,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		if reflect.DeepEqual(env, newEnv) {
 			continue
 		}
-
-		fmt.Printf("env: %s  newEnv: %s\n", env, newEnv)
 
 		// Kind of dangerous if config.Path is /
 		// fmt.Printf("%s\n", config.Path)
