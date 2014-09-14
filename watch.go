@@ -119,13 +119,15 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			f.Sync()
 		}
 
-		// Configuration changed, run our onchange command.
-		var cmd = exec.Command(config.OnChange[0], config.OnChange[1:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Start()
-		if err != nil {
-			return 111, err
+		// Configuration changed, run our onchange command, if one was specified.
+		if (config.OnChange != nil) {
+			var cmd = exec.Command(config.OnChange[0], config.OnChange[1:]...)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err := cmd.Start()
+			if err != nil {
+				return 111, err
+			}
 		}
 	}
 

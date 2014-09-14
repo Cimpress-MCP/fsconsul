@@ -50,7 +50,6 @@ func TestAddFile(t* testing.T) {
 		config := WatchConfig{
 			ConsulAddr: consulapi.DefaultConfig().Address,
 			ConsulDC:   "dc1",
-			OnChange:   []string{ "echo", "\"done\"" },
 			Path:       tempDir,
 			Prefix:     "gotest",
 		}
@@ -69,6 +68,7 @@ func TestAddFile(t* testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Give ourselves a little bit of time for the watcher to read the file
 	time.Sleep(100 * time.Millisecond)
 
 	fileValue, err := ioutil.ReadFile(path.Join(tempDir, "randombytes", "entry"))
