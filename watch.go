@@ -84,12 +84,9 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// Replace the env so we can detect future changes
 		env = newEnv
 
-		fmt.Println(newEnv)
-
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
 			// Write file to disk
-			fmt.Printf("%s=%s\n", k, v)
 
 			keyfile := fmt.Sprintf("%s%s", config.Path, k)
 
@@ -97,7 +94,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			if isWindows {
 				keyfile = strings.Replace(keyfile, "/", "\\", -1)
 			}
-			
 
 			// TODO: Scream bloody murder if this fails
 			// mkdirp the file's path
@@ -114,7 +110,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 			wrote, err := f.WriteString(v)
 			if err != nil {
-				fmt.Printf("Failed to write value %s to file %s due to %s\n", v, keyfile, err)
+				fmt.Printf("Failed to write to file %s due to %s\n", keyfile, err)
 				continue
 			}
 
