@@ -29,6 +29,7 @@ func makeConsulClient(t *testing.T) *consulapi.Client {
 
 func TestAddFile(t* testing.T) {
 	tempDir, err := ioutil.TempDir("", "fsconsul_test")
+	defer os.RemoveAll(tempDir)
 
 	if (err != nil) {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -78,10 +79,5 @@ func TestAddFile(t* testing.T) {
 
 	if (!bytes.Equal(value, fileValue)) {
 		t.Fatal("Unmatched values")
-	}
-
-	err = os.RemoveAll(tempDir)
-	if (err != nil) {
-		t.Fatalf("Failed to clear temp dir: %v", err)
 	}
 }
