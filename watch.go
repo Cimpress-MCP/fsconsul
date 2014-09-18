@@ -95,10 +95,12 @@ func watchAndExec(config *WatchConfig) (int, error) {
 				keyfile = strings.Replace(keyfile, "/", "\\", -1)
 			}
 
-			// TODO: Scream bloody murder if this fails
 			// mkdirp the file's path
 			// Does this work on windows since its checking for / and not \
-			mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
+			err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
+			if (err != nil) {
+				fmt.Println("Failed to create parent directory for key", err)
+			}
 
 			f, err := os.Create(keyfile)
 			if err != nil {
