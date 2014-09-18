@@ -10,6 +10,8 @@ import (
 
 	"github.com/armed/mkdirp"
 	"github.com/armon/consul-api"
+
+	"github.com/ryanbreen/gocrypt/gocrypt"
 )
 
 // Configuration for watches.
@@ -19,6 +21,7 @@ type WatchConfig struct {
 	OnChange   []string
 	Prefix     string
 	Path       string
+	Keystore   string
 }
 
 // Connects to Consul and watches a given K/V prefix and uses that to
@@ -110,7 +113,9 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 			defer f.Close()
 
-			wrote, err := f.WriteString(v)
+			decryptedValue, err := gocrypt.DecryptTags([]byte(v), config.Keystore)
+
+			wrote, err := f.Write(decryptedValue)
 			if err != nil {
 				fmt.Printf("Failed to write to file %s due to %s\n", keyfile, err)
 				continue

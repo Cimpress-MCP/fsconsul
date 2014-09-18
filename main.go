@@ -16,6 +16,7 @@ func main() {
 func realMain() int {
 	var consulAddr string
 	var consulDC string
+	var keystore string
 	flag.Usage = usage
 	flag.StringVar(
 		&consulAddr, "addr", "127.0.0.1:8500",
@@ -23,6 +24,9 @@ func realMain() int {
 	flag.StringVar(
 		&consulDC, "dc", "",
 		"consul datacenter, uses local if blank")
+	flag.StringVar(
+		&keystore, "keystore", "",
+		"directory of keys used for decryption")
 	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()
@@ -46,6 +50,7 @@ func realMain() int {
 		OnChange:   args[2:],
 		Path:       localPath,
 		Prefix:     args[0],
+		Keystore:   keystore,
 	}
 	result, err := watchAndExec(&config)
 	if err != nil {
