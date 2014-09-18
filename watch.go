@@ -11,7 +11,7 @@ import (
 	"github.com/armed/mkdirp"
 	"github.com/armon/consul-api"
 
-	"github.com/ryanbreen/gocrypt/gocrypt"
+	"github.com/ryanbreen/gocrypt"
 )
 
 // Configuration for watches.
