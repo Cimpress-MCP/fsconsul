@@ -11,7 +11,7 @@ import (
 	"github.com/armed/mkdirp"
 	"github.com/armon/consul-api"
 
-	"github.com/ryanbreen/gocrypt"
+	"github.com/ryanbreen/gosecret"
 )
 
 // Configuration for watches.
@@ -113,7 +113,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 			defer f.Close()
 
-			decryptedValue, err := gocrypt.DecryptTags([]byte(v), config.Keystore)
+			decryptedValue, err := gosecret.DecryptTags([]byte(v), config.Keystore)
 
 			wrote, err := f.Write(decryptedValue)
 			if err != nil {
