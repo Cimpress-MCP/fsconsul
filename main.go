@@ -38,11 +38,11 @@ func realMain() int {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		return 112
 	}
-	fmt.Printf("fsconsul root path: %s%sfsconsul\n", usr.HomeDir, string(os.PathSeparator)) 
+	fmt.Printf("fsconsul root path: %s%sfsconsul\n", usr.HomeDir, string(os.PathSeparator))
 
 	args := flag.Args()
 
-	localPath := fmt.Sprintf("%s%sfsconsul%s", usr.HomeDir, string(os.PathSeparator), args[1]) 
+	localPath := fmt.Sprintf("%s%sfsconsul%s", usr.HomeDir, string(os.PathSeparator), args[1])
 
 	config := WatchConfig{
 		ConsulAddr: consulAddr,

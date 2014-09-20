@@ -82,7 +82,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			os.RemoveAll(config.Path)
 			mkdirp.Mk(config.Path, 0777)
 			fmt.Println("Tree rebuild triggered")
-		} 
+		}
 
 		// Replace the env so we can detect future changes
 		env = newEnv
@@ -101,7 +101,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			// mkdirp the file's path
 			// Does this work on windows since its checking for / and not \
 			err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
-			if (err != nil) {
+			if err != nil {
 				fmt.Println("Failed to create parent directory for key", err)
 			}
 
@@ -127,7 +127,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		}
 
 		// Configuration changed, run our onchange command, if one was specified.
-		if (config.OnChange != nil) {
+		if config.OnChange != nil {
 			var cmd = exec.Command(config.OnChange[0], config.OnChange[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
@@ -137,8 +137,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			}
 		}
 	}
-
-	return 0, nil
 }
 
 func watch(

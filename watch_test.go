@@ -1,13 +1,13 @@
 package main
 
 import (
-	"testing"
 	"bytes"
+	"crypto/rand"
+	"io/ioutil"
 	"os"
 	"path"
+	"testing"
 	"time"
-	"io/ioutil"
-	"crypto/rand"
 
 	"github.com/armon/consul-api"
 )
@@ -27,11 +27,11 @@ func makeConsulClient(t *testing.T) *consulapi.Client {
 	return client
 }
 
-func TestAddFile(t* testing.T) {
+func TestAddFile(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "fsconsul_test")
 	defer os.RemoveAll(tempDir)
 
-	if (err != nil) {
+	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestAddFile(t* testing.T) {
 
 		_, err := watchAndExec(&config)
 		if err != nil {
-			t.Fatalf("Failed to run watchAndExec: %v")
+			t.Fatalf("Failed to run watchAndExec: %v", err)
 		}
 
 	}()
@@ -73,11 +73,11 @@ func TestAddFile(t* testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	fileValue, err := ioutil.ReadFile(path.Join(tempDir, "randombytes", "entry"))
-	if (err != nil) {
+	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	if (!bytes.Equal(value, fileValue)) {
+	if !bytes.Equal(value, fileValue) {
 		t.Fatal("Unmatched values")
 	}
 }
