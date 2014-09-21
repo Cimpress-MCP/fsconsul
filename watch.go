@@ -77,12 +77,17 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			continue
 		}
 
-		// Blocked by KV().List bug, will not rebuild unless all keys deleted atm.
+		// Blocked by KV().List bug, will not rebuild unless all keys deleted ATM, so we
+		// are disabling deletes.
+		// TODO: Make this more granular: only delete keys that were deleted based on the
+		// tombstones contained in a future version of Consul.
+		/**
 		if _, err := os.Stat(config.Path); err == nil {
 			os.RemoveAll(config.Path)
 			mkdirp.Mk(config.Path, 0777)
 			fmt.Println("Tree rebuild triggered")
 		}
+		**/
 
 		// Replace the env so we can detect future changes
 		env = newEnv
