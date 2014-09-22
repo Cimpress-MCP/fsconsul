@@ -118,7 +118,15 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 			defer f.Close()
 
+			fmt.Println("Input value length:", len(v))
+
 			decryptedValue, err := gosecret.DecryptTags([]byte(v), config.Keystore)
+			if err != nil {
+				fmt.Println("Failed to decrypt value due to", err)
+				decryptedValue = []byte(v)
+			}
+
+			fmt.Println("Output length:", len(decryptedValue))
 
 			wrote, err := f.Write(decryptedValue)
 			if err != nil {

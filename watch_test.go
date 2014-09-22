@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path"
@@ -63,8 +64,9 @@ func TestAddFile(t *testing.T) {
 	}()
 
 	// Put a test KV
-	value := createRandomBytes(1024)
-	p := &consulapi.KVPair{Key: key, Flags: 42, Value: value}
+	encodedValue := make([]byte, base64.StdEncoding.EncodedLen(1024))
+	base64.StdEncoding.Encode(encodedValue, createRandomBytes(1024))
+	p := &consulapi.KVPair{Key: key, Flags: 42, Value: encodedValue}
 	if _, err := kv.Put(p, nil); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -77,7 +79,7 @@ func TestAddFile(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !bytes.Equal(value, fileValue) {
+	if !bytes.Equal(encodedValue, fileValue) {
 		t.Fatal("Unmatched values")
 	}
 }
