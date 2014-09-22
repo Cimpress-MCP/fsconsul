@@ -95,7 +95,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
 			// Write file to disk
-
 			keyfile := fmt.Sprintf("%s%s", config.Path, k)
 
 			// if Windows, replace / with windows path delimiter
@@ -104,7 +103,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			}
 
 			// mkdirp the file's path
-			// Does this work on windows since its checking for / and not \
+			// TODO: Does this work on windows since its checking for / and not \
 			err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
 			if err != nil {
 				fmt.Println("Failed to create parent directory for key", err)
