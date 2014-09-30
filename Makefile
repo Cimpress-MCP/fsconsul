@@ -18,7 +18,7 @@ install: deps
 test: deps
 	go list ./... | xargs -n1 go test
 
-integ:
+integ: deps
 	go list ./... | INTEG_TESTS=yes xargs -n1 go test
 
 format: deps
