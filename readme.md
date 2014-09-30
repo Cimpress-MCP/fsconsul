@@ -31,3 +31,7 @@ Options:
   -addr="127.0.0.1:8500": consul HTTP API address with port
   -dc="": consul datacenter, uses local if blank
 ```
+
+## CI
+
+Builds are automatically run by Travis on any push or pull request.
