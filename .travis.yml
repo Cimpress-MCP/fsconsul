@@ -4,5 +4,3 @@ go:
     - 1.3
 
 install: make install
-script:
-    - make integ
