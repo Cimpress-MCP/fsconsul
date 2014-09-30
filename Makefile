@@ -18,9 +18,6 @@ install: deps
 test: deps
 	go list ./... | xargs -n1 go test
 
-integ: deps
-	go list ./... | INTEG_TESTS=yes xargs -n1 go test
-
 format: deps
 	@echo "--> Running go fmt"
 	@go fmt $(PACKAGES)
