@@ -12,7 +12,7 @@ deps:
 	@go get -d -v ./...
 	@echo $(DEPS) | xargs -n1 go get -d
 
-install:
+install: deps
 	@go install
 
 test: deps
