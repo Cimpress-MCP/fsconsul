@@ -42,7 +42,12 @@ func TestAddFile(t *testing.T) {
 	key := "gotest/randombytes/entry"
 
 	token := os.Getenv("TOKEN")
-	writeOptions := &consulapi.WriteOptions{Token: token}
+	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: "LEX"}
+
+	dc := os.Getenv("DC")
+	if dc == "" {
+		dc = "dc1"
+	}
 
 	// Delete all keys in the "gotest" KV space
 	if _, err := kv.DeleteTree("gotest", writeOptions); err != nil {
@@ -54,7 +59,7 @@ func TestAddFile(t *testing.T) {
 
 		config := WatchConfig{
 			ConsulAddr: consulapi.DefaultConfig().Address,
-			ConsulDC:   "dc1",
+			ConsulDC:   dc,
 			Path:       tempDir,
 			Prefix:     "gotest",
 			Token:		token,
