@@ -41,8 +41,11 @@ func TestAddFile(t *testing.T) {
 
 	key := "gotest/randombytes/entry"
 
+	token := os.Getenv("TOKEN")
+	writeOptions := &consulapi.WriteOptions{Token: token}
+
 	// Delete all keys in the "gotest" KV space
-	if _, err := kv.DeleteTree("gotest", nil); err != nil {
+	if _, err := kv.DeleteTree("gotest", writeOptions); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -54,6 +57,7 @@ func TestAddFile(t *testing.T) {
 			ConsulDC:   "dc1",
 			Path:       tempDir,
 			Prefix:     "gotest",
+			Token:		token,
 		}
 
 		_, err := watchAndExec(&config)
@@ -67,7 +71,7 @@ func TestAddFile(t *testing.T) {
 	encodedValue := make([]byte, base64.StdEncoding.EncodedLen(1024))
 	base64.StdEncoding.Encode(encodedValue, createRandomBytes(1024))
 	p := &consulapi.KVPair{Key: key, Flags: 42, Value: encodedValue}
-	if _, err := kv.Put(p, nil); err != nil {
+	if _, err := kv.Put(p, writeOptions); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 

@@ -16,6 +16,7 @@ func realMain() int {
 	var consulAddr string
 	var consulDC string
 	var keystore string
+	var token string
 	flag.Usage = usage
 	flag.StringVar(
 		&consulAddr, "addr", "127.0.0.1:8500",
@@ -26,6 +27,9 @@ func realMain() int {
 	flag.StringVar(
 		&keystore, "keystore", "",
 		"directory of keys used for decryption")
+	flag.StringVar(
+		&keystore, "token", "",
+		"token to use for ACL access")
 	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()
@@ -46,6 +50,7 @@ func realMain() int {
 		Path:       args[1],
 		Prefix:     args[0],
 		Keystore:   keystore,
+		Token:      token,
 	}
 	result, err := watchAndExec(&config)
 	if err != nil {

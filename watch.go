@@ -22,6 +22,7 @@ type WatchConfig struct {
 	Prefix     string
 	Path       string
 	Keystore   string
+	Token      string
 }
 
 // Connects to Consul and watches a given K/V prefix and uses that to
@@ -50,7 +51,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	quitCh := make(chan struct{})
 	defer close(quitCh)
 	go watch(
-		client, config.Prefix, config.Path, pairCh, errCh, quitCh)
+		client, config.Prefix, config.Path, config.Token, pairCh, errCh, quitCh)
 
 	var env map[string]string
 	for {
@@ -155,6 +156,7 @@ func watch(
 	client *consulapi.Client,
 	prefix string,
 	path string,
+	token string,
 	pairCh chan<- consulapi.KVPairs,
 	errCh chan<- error,
 	quitCh <-chan struct{}) {
@@ -185,7 +187,7 @@ func watch(
 
 		pairs, meta, err = retryableList(
 			func() (consulapi.KVPairs, *consulapi.QueryMeta, error) {
-				opts := &consulapi.QueryOptions{WaitIndex: curIndex}
+				opts := &consulapi.QueryOptions{WaitIndex: curIndex, Token: token}
 				return client.KV().List(prefix, opts)
 			})
 
