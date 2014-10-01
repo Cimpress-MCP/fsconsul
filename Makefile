@@ -22,4 +22,4 @@ format: deps
 	@echo "--> Running go fmt"
 	@go fmt $(PACKAGES)
 
-.PHONY: all cov deps install integ test
+.PHONY: all cov deps install test
