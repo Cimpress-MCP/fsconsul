@@ -28,7 +28,7 @@ func realMain() int {
 		&keystore, "keystore", "",
 		"directory of keys used for decryption")
 	flag.StringVar(
-		&keystore, "token", "",
+		&token, "token", "",
 		"token to use for ACL access")
 	flag.Parse()
 	if flag.NArg() < 2 {

@@ -93,6 +93,8 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// Replace the env so we can detect future changes
 		env = newEnv
 
+		fmt.Println(env)
+
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
 			// Write file to disk
@@ -184,6 +186,8 @@ func watch(
 			return
 		default:
 		}
+
+		fmt.Println("Using token", token)
 
 		pairs, meta, err = retryableList(
 			func() (consulapi.KVPairs, *consulapi.QueryMeta, error) {
