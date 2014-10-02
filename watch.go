@@ -34,7 +34,6 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 	client, err := consulapi.NewClient(kvConfig)
 	if err != nil {
-		fmt.Println("Failed here", err)
 		return 0, err
 	}
 
@@ -94,7 +93,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// Replace the env so we can detect future changes
 		env = newEnv
 
-		fmt.Println(env)
+		//fmt.Println(env)
 
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
@@ -191,7 +190,6 @@ func watch(
 
 		pairs, meta, err = retryableList(
 			func() (consulapi.KVPairs, *consulapi.QueryMeta, error) {
-				fmt.Println("Using token", token)
 				opts = &consulapi.QueryOptions{WaitIndex: curIndex, Token: token}
 				return client.KV().List(prefix, opts)
 			})
