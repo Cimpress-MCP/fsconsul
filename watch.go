@@ -34,6 +34,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 	client, err := consulapi.NewClient(kvConfig)
 	if err != nil {
+		fmt.Println("Failed here", err)
 		return 0, err
 	}
 
@@ -168,7 +169,8 @@ func watch(
 
 	// Get the initial list of k/v pairs. We don't do a retryableList
 	// here because we want a fast fail if the initial request fails.
-	pairs, meta, err := client.KV().List(prefix, nil)
+	opts := &consulapi.QueryOptions{Token: token}
+	pairs, meta, err := client.KV().List(prefix, opts)
 	if err != nil {
 		errCh <- err
 		return
@@ -187,11 +189,10 @@ func watch(
 		default:
 		}
 
-		fmt.Println("Using token", token)
-
 		pairs, meta, err = retryableList(
 			func() (consulapi.KVPairs, *consulapi.QueryMeta, error) {
-				opts := &consulapi.QueryOptions{WaitIndex: curIndex, Token: token}
+				fmt.Println("Using token", token)
+				opts = &consulapi.QueryOptions{WaitIndex: curIndex, Token: token}
 				return client.KV().List(prefix, opts)
 			})
 
