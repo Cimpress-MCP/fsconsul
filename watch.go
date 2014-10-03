@@ -103,13 +103,17 @@ func watchAndExec(config *WatchConfig) (int, error) {
 			// if Windows, replace / with windows path delimiter
 			if isWindows {
 				keyfile = strings.Replace(keyfile, "/", "\\", -1)
-			}
-
-			// mkdirp the file's path
-			// TODO: Does this work on windows since its checking for / and not \
-			err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
-			if err != nil {
-				fmt.Println("Failed to create parent directory for key", err)
+				// mkdirp the file's path
+				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "\\")], 0777)
+				if err != nil {
+					fmt.Println("Failed to create parent directory for key", err)
+				}
+			} else {
+				// mkdirp the file's path
+				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
+				if err != nil {
+					fmt.Println("Failed to create parent directory for key", err)
+				}
 			}
 
 			f, err := os.Create(keyfile)
