@@ -30,6 +30,8 @@ Options:
 
   -addr="127.0.0.1:8500": consul HTTP API address with port
   -dc="": consul datacenter, uses local if blank
+  -keystore="": directory of keys used for decryption
+  -token="": token to use for ACL access
 ```
 
 ## CI
