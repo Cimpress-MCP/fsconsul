@@ -42,12 +42,12 @@ func TestAddFile(t *testing.T) {
 	key := "gotest/randombytes/entry"
 
 	token := os.Getenv("TOKEN")
-	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: "LEX"}
-
 	dc := os.Getenv("DC")
 	if dc == "" {
 		dc = "dc1"
 	}
+
+	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
 
 	// Delete all keys in the "gotest" KV space
 	if _, err := kv.DeleteTree("gotest", writeOptions); err != nil {
