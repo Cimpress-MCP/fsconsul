@@ -198,15 +198,15 @@ func watch(
 				return client.KV().List(prefix, opts)
 			})
 
-		if meta == nil {
+		if err != nil {
 			// This happens when the connection to the consul agent dies.  Build in a retry by looping after a delay.
 			fmt.Println("Error communicating with consul agent.")
-			time.Sleep(time.Duration(5) * time.Second)
-		} else {
-			pairCh <- pairs
-			fmt.Printf("curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
-			curIndex = meta.LastIndex
+			continue
 		}
+
+		pairCh <- pairs
+		fmt.Printf("curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
+		curIndex = meta.LastIndex
 	}
 }
 
