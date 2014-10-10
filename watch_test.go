@@ -60,7 +60,7 @@ func TestAddFile(t *testing.T) {
 		config := WatchConfig{
 			ConsulAddr: consulapi.DefaultConfig().Address,
 			ConsulDC:   dc,
-			Path:       tempDir,
+			Path:       tempDir + "/",
 			Prefix:     "gotest",
 			Token:		token,
 		}
@@ -68,6 +68,10 @@ func TestAddFile(t *testing.T) {
 		_, err := watchAndExec(&config)
 		if err != nil {
 			t.Fatalf("Failed to run watchAndExec: %v", err)
+		}
+		
+		if config.Path[len(config.Path)-1] == 34 {
+			t.Fatalf("Config path should have trailing spaces stripped")
 		}
 
 	}()
