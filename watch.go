@@ -44,6 +44,13 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 	isWindows := os.PathSeparator != '/'
 
+	// Remove an unhandled trailing quote, which presented itself on Windows when
+	// the given path contained spaces (requiring quotes) and also had a trailing
+	// backslash.
+	if config.Path[len(config.Path)-1] == 34 {
+		config.Path = config.Path[:len(config.Path)-1]
+	}
+
 	// Start the watcher goroutine that watches for changes in the
 	// K/V and notifies us on a channel.
 	errCh := make(chan error, 1)

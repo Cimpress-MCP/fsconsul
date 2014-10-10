@@ -43,19 +43,11 @@ func realMain() int {
 		onChange = args[2:]
 	}
 
-	// Remove an unhandled trailing quote, which presented itself on Windows when
-	// the given path contained spaces (requiring quotes) and also had a trailing
-	// backslash.
-	var path = args[1]
-	if path[len(path)-1] == 34 {
-		path = path[:len(path)-1]
-	}
-
 	config := WatchConfig{
 		ConsulAddr: consulAddr,
 		ConsulDC:   consulDC,
 		OnChange:   onChange,
-		Path:       path,
+		Path:       args[1],
 		Prefix:     args[0],
 		Keystore:   keystore,
 		Token:      token,
