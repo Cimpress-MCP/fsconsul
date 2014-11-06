@@ -43,22 +43,45 @@ func realMain() int {
 		onChange = args[2:]
 	}
 
-	config := WatchConfig{
-		ConsulAddr: consulAddr,
-		ConsulDC:   consulDC,
-		OnChange:   onChange,
-		Path:       args[1],
-		Prefix:     args[0],
-		Keystore:   keystore,
-		Token:      token,
-	}
-	result, err := watchAndExec(&config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-		return 111
+	// Check whether multiple paths / prefixes are specified
+	var prefixes = strings.Split(args[0], "|")
+	var paths = strings.Split(args[1], "|")
+
+	if len(prefixes) != len(paths) {
+		fmt.Fprintf(os.Stderr, "Error: There must be an identical number of prefixes and paths.\n")
 	}
 
-	return result
+    returnCodes := make(chan int)
+
+	// Fork a separate goroutine for each prefix/path pair
+	for i := 0; i < len(prefixes); i++ {
+		go func(config WatchConfig) {
+
+			fmt.Println("Got watch config %s", config)
+
+			returnCode, err := watchAndExec(&config)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			}
+
+			returnCodes <- returnCode
+		}(WatchConfig{
+			ConsulAddr: consulAddr,
+			ConsulDC:   consulDC,
+			OnChange:   onChange,
+			Prefix:     prefixes[i],
+			Path:       paths[i],
+			Keystore:   keystore,
+			Token:      token,
+		})
+	}
+
+	// Wait for completion of all forked go routines
+	for i := 0; i < len(prefixes); i++ {
+		fmt.Println(<-returnCodes)
+	}
+
+	return 0
 }
 
 func usage() {
