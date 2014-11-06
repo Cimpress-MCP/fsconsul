@@ -49,6 +49,7 @@ func realMain() int {
 
 	if len(prefixes) != len(paths) {
 		fmt.Fprintf(os.Stderr, "Error: There must be an identical number of prefixes and paths.\n")
+		return 1
 	}
 
 	returnCodes := make(chan int)
