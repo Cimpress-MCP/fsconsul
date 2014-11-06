@@ -62,14 +62,14 @@ func TestAddFile(t *testing.T) {
 			ConsulDC:   dc,
 			Path:       tempDir + "/",
 			Prefix:     "gotest",
-			Token:		token,
+			Token:      token,
 		}
 
 		_, err := watchAndExec(&config)
 		if err != nil {
 			t.Fatalf("Failed to run watchAndExec: %v", err)
 		}
-		
+
 		if config.Path[len(config.Path)-1] == 34 {
 			t.Fatalf("Config path should have trailing spaces stripped")
 		}

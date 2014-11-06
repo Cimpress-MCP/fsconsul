@@ -51,7 +51,7 @@ func realMain() int {
 		fmt.Fprintf(os.Stderr, "Error: There must be an identical number of prefixes and paths.\n")
 	}
 
-    returnCodes := make(chan int)
+	returnCodes := make(chan int)
 
 	// Fork a separate goroutine for each prefix/path pair
 	for i := 0; i < len(prefixes); i++ {
