@@ -28,6 +28,7 @@ Usage: fsconsul [options] prefixes paths onchange...
 
 Options:
 
+  -configFile="": json file containing all configuration (if this is provided, all other config is ignored)
   -addr="127.0.0.1:8500": consul HTTP API address with port
   -dc="": consul datacenter, uses local if blank
   -keystore="": directory of keys used for decryption

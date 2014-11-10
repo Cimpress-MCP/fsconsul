@@ -35,17 +35,27 @@ type WatchConfig struct {
 	Mappings   []MappingConfig
 }
 
+func applyDefaults(config *WatchConfig) {
+
+	if config.Consul.Addr == "" {
+		config.Consul.Addr = "127.0.0.1:8500"
+	}
+}
+
 // Queue watchers
 func watchAndExec(config *WatchConfig) (int) {
+
+	applyDefaults(config)
+
 	returnCodes := make(chan int)
 
-	fmt.Println("Starting watchers with Consul globals %s", config.Consul)
+	fmt.Printf("Starting watchers with Consul globals %v\n", config.Consul)
 
 	// Fork a separate goroutine for each prefix/path pair
 	for i := 0; i < len(config.Mappings); i++ {
 		go func(mappingConfig *MappingConfig) {
 
-			fmt.Println("Got mapping config %s", mappingConfig)
+			fmt.Printf("Got mapping config %v\n", mappingConfig)
 
 			// TODO: Parse OnChangeRaw into OnChange if necessary.
 

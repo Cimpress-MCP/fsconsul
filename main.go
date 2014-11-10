@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,9 +20,13 @@ func realMain() int {
 	var keystore string
 	var token string
 	var configFile string
+
+	// This will hold the configuration, whether it's resolved from command-line or JSON.
+	var config WatchConfig
+
 	flag.Usage = usage
 	flag.StringVar(
-		&consulAddr, "addr", "127.0.0.1:8500",
+		&consulAddr, "addr", "",
 		"consul HTTP API address with port")
 	flag.StringVar(
 		&consulDC, "dc", "",
@@ -33,44 +39,64 @@ func realMain() int {
 		"token to use for ACL access")
 	flag.StringVar(
 		&configFile, "configFile", "",
-		"json file containing all configuration")
+		"json file containing all configuration (if this is provided, all other config is ignored)")
 	flag.Parse()
-	if flag.NArg() < 2 {
+	if configFile == "" && flag.NArg() < 2 {
 		flag.Usage()
 		return 1
 	}
 
 	args := flag.Args()
 
-	var onChange []string
-	if len(args) > 2 {
-		onChange = args[2:]
-	}
+	if configFile != "" {
 
-	// Check whether multiple paths / prefixes are specified
-	var prefixes = strings.Split(args[0], "|")
-	var paths = strings.Split(args[1], "|")
+		// Load the configuration from JSON.
+		configBody, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read config file due to %v", err)
+			return 2
+		}
 
-	if len(prefixes) != len(paths) {
-		fmt.Fprintf(os.Stderr, "Error: There must be an identical number of prefixes and paths.\n")
-		return 1
-	}
+		err = json.Unmarshal(configBody, &config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse JSON due to %v", err)
+			return 3
+		}
 
-	config := WatchConfig{
-		Consul: ConsulConfig {
-			Addr: consulAddr,
-			DC: consulDC,
-			Token: token,
-		},
-		Mappings: make([]MappingConfig, len(prefixes)),
-	}
+	} else {
 
-	for i := 0; i < len(prefixes); i++ {
-		config.Mappings[i] = MappingConfig{
-			Prefix:     prefixes[i],
-			Path:       paths[i],
-			Keystore:   keystore,
-			OnChange:   onChange,
+		// Build the configuraiton from the command-line
+
+		var onChange []string
+		if len(args) > 2 {
+			onChange = args[2:]
+		}
+
+		// Check whether multiple paths / prefixes are specified
+		var prefixes = strings.Split(args[0], "|")
+		var paths = strings.Split(args[1], "|")
+
+		if len(prefixes) != len(paths) {
+			fmt.Fprintf(os.Stderr, "Error: There must be an identical number of prefixes and paths.\n")
+			return 1
+		}
+
+		config := WatchConfig{
+			Consul: ConsulConfig {
+				Addr: consulAddr,
+				DC: consulDC,
+				Token: token,
+			},
+			Mappings: make([]MappingConfig, len(prefixes)),
+		}
+
+		for i := 0; i < len(prefixes); i++ {
+			config.Mappings[i] = MappingConfig{
+				Prefix:     prefixes[i],
+				Path:       paths[i],
+				Keystore:   keystore,
+				OnChange:   onChange,
+			}
 		}
 	}
 
