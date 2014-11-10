@@ -17,6 +17,7 @@ func realMain() int {
 	var consulDC string
 	var keystore string
 	var token string
+	var configFile string
 	flag.Usage = usage
 	flag.StringVar(
 		&consulAddr, "addr", "127.0.0.1:8500",
@@ -30,6 +31,9 @@ func realMain() int {
 	flag.StringVar(
 		&token, "token", "",
 		"token to use for ACL access")
+	flag.StringVar(
+		&configFile, "configFile", "",
+		"json file containing all configuration")
 	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()
@@ -52,37 +56,27 @@ func realMain() int {
 		return 1
 	}
 
-	returnCodes := make(chan int)
+	consulConfig := ConsulConfig {
+		Addr: consulAddr,
+		DC: consulDC,
+		Token: token,
+	}
 
-	// Fork a separate goroutine for each prefix/path pair
+	config := WatchConfig{
+		Consul: consulConfig,
+		Mappings: make([]MappingConfig, len(prefixes)),
+	}
+
 	for i := 0; i < len(prefixes); i++ {
-		go func(config WatchConfig) {
-
-			fmt.Println("Got watch config %s", config)
-
-			returnCode, err := watchAndExec(&config)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-			}
-
-			returnCodes <- returnCode
-		}(WatchConfig{
-			ConsulAddr: consulAddr,
-			ConsulDC:   consulDC,
-			OnChange:   onChange,
+		config.Mappings[i] = MappingConfig{
 			Prefix:     prefixes[i],
 			Path:       paths[i],
 			Keystore:   keystore,
-			Token:      token,
-		})
+			OnChange:   onChange,
+		}
 	}
 
-	// Wait for completion of all forked go routines
-	for i := 0; i < len(prefixes); i++ {
-		fmt.Println(<-returnCodes)
-	}
-
-	return 0
+	return watchAndExec(&config)
 }
 
 func usage() {

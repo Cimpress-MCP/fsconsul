@@ -14,23 +14,63 @@ import (
 	"github.com/ryanbreen/gosecret"
 )
 
-// Configuration for watches.
-type WatchConfig struct {
-	ConsulAddr string
-	ConsulDC   string
-	OnChange   []string
-	Prefix     string
-	Path       string
-	Keystore   string
+// Configuration for Consul
+type ConsulConfig struct {
+	Addr       string
+	DC         string
 	Token      string
+}
+
+// Configuration for all mappings from KV to fs managed by this process.
+type MappingConfig struct {
+	OnChange    []string
+	OnChangeRaw string
+	Prefix      string
+	Path        string
+	Keystore    string
+}
+
+type WatchConfig struct {
+	Consul     ConsulConfig
+	Mappings   []MappingConfig
+}
+
+// Queue watchers
+func watchAndExec(config *WatchConfig) (int) {
+	returnCodes := make(chan int)
+
+	fmt.Println("Starting watchers with Consul globals %s", config.Consul)
+
+	// Fork a separate goroutine for each prefix/path pair
+	for i := 0; i < len(config.Mappings); i++ {
+		go func(mappingConfig *MappingConfig) {
+
+			fmt.Println("Got mapping config %s", mappingConfig)
+
+			// TODO: Parse OnChangeRaw into OnChange if necessary.
+
+			returnCode, err := watchMappingAndExec(&config.Consul, mappingConfig)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			}
+
+			returnCodes <- returnCode
+		}(&config.Mappings[i])
+	}
+
+	// Wait for completion of all forked go routines
+	for i := 0; i < len(config.Mappings); i++ {
+		fmt.Println(<-returnCodes)
+	}
+	return -1;
 }
 
 // Connects to Consul and watches a given K/V prefix and uses that to
 // write to the filesystem.
-func watchAndExec(config *WatchConfig) (int, error) {
+func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfig) (int, error) {
 	kvConfig := consulapi.DefaultConfig()
-	kvConfig.Address = config.ConsulAddr
-	kvConfig.Datacenter = config.ConsulDC
+	kvConfig.Address = consulConfig.Addr
+	kvConfig.Datacenter = consulConfig.DC
 
 	client, err := consulapi.NewClient(kvConfig)
 	if err != nil {
@@ -38,8 +78,8 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	}
 
 	// If the config path is lacking a trailing separator, add it.
-	if config.Path[len(config.Path)-1] != os.PathSeparator {
-		config.Path += string(os.PathSeparator)
+	if mappingConfig.Path[len(mappingConfig.Path)-1] != os.PathSeparator {
+		mappingConfig.Path += string(os.PathSeparator)
 	}
 
 	isWindows := os.PathSeparator != '/'
@@ -47,8 +87,8 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	// Remove an unhandled trailing quote, which presented itself on Windows when
 	// the given path contained spaces (requiring quotes) and also had a trailing
 	// backslash.
-	if config.Path[len(config.Path)-1] == 34 {
-		config.Path = config.Path[:len(config.Path)-1]
+	if mappingConfig.Path[len(mappingConfig.Path)-1] == 34 {
+		mappingConfig.Path = mappingConfig.Path[:len(mappingConfig.Path)-1]
 	}
 
 	// Start the watcher goroutine that watches for changes in the
@@ -58,7 +98,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 	quitCh := make(chan struct{})
 	defer close(quitCh)
 	go watch(
-		client, config.Prefix, config.Path, config.Token, pairCh, errCh, quitCh)
+		client, mappingConfig.Prefix, mappingConfig.Path, consulConfig.Token, pairCh, errCh, quitCh)
 
 	var env map[string]string
 	for {
@@ -74,7 +114,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 		newEnv := make(map[string]string)
 		for _, pair := range pairs {
-			k := strings.TrimPrefix(pair.Key, config.Prefix)
+			k := strings.TrimPrefix(pair.Key, mappingConfig.Prefix)
 			k = strings.TrimLeft(k, "/")
 			newEnv[k] = string(pair.Value)
 		}
@@ -105,7 +145,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
 			// Write file to disk
-			keyfile := fmt.Sprintf("%s%s", config.Path, k)
+			keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)
 
 			// if Windows, replace / with windows path delimiter
 			if isWindows {
@@ -133,7 +173,7 @@ func watchAndExec(config *WatchConfig) (int, error) {
 
 			fmt.Println("Input value length:", len(v))
 
-			decryptedValue, err := gosecret.DecryptTags([]byte(v), config.Keystore)
+			decryptedValue, err := gosecret.DecryptTags([]byte(v), mappingConfig.Keystore)
 			if err != nil {
 				fmt.Println("Failed to decrypt value due to", err)
 				decryptedValue = []byte(v)
@@ -153,8 +193,8 @@ func watchAndExec(config *WatchConfig) (int, error) {
 		}
 
 		// Configuration changed, run our onchange command, if one was specified.
-		if config.OnChange != nil {
-			var cmd = exec.Command(config.OnChange[0], config.OnChange[1:]...)
+		if mappingConfig.OnChange != nil {
+			var cmd = exec.Command(mappingConfig.OnChange[0], mappingConfig.OnChange[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			err := cmd.Start()

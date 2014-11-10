@@ -57,20 +57,28 @@ func TestAddFile(t *testing.T) {
 	// Run the fsconsul listener in the background
 	go func() {
 
+		//consulConfig := 
+
 		config := WatchConfig{
-			ConsulAddr: consulapi.DefaultConfig().Address,
-			ConsulDC:   dc,
+			Consul: ConsulConfig{
+				Addr: consulapi.DefaultConfig().Address,
+				DC:   dc,
+				Token:      token,
+			},
+			Mappings: make([]MappingConfig, 1),
+		}
+
+		config.Mappings[0] = MappingConfig {
 			Path:       tempDir + "/",
 			Prefix:     "gotest",
-			Token:      token,
 		}
 
-		_, err := watchAndExec(&config)
-		if err != nil {
-			t.Fatalf("Failed to run watchAndExec: %v", err)
+		rvalue := watchAndExec(&config)
+		if rvalue == -1 {
+			t.Fatalf("Failed to run watchAndExec")
 		}
 
-		if config.Path[len(config.Path)-1] == 34 {
+		if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
 			t.Fatalf("Config path should have trailing spaces stripped")
 		}
 
