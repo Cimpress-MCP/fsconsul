@@ -56,14 +56,12 @@ func realMain() int {
 		return 1
 	}
 
-	consulConfig := ConsulConfig {
-		Addr: consulAddr,
-		DC: consulDC,
-		Token: token,
-	}
-
 	config := WatchConfig{
-		Consul: consulConfig,
+		Consul: ConsulConfig {
+			Addr: consulAddr,
+			DC: consulDC,
+			Token: token,
+		},
 		Mappings: make([]MappingConfig, len(prefixes)),
 	}
 
