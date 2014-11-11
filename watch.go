@@ -24,7 +24,7 @@ type ConsulConfig struct {
 // Configuration for all mappings from KV to fs managed by this process.
 type MappingConfig struct {
 	OnChange    []string
-	OnChangeRaw string
+	OnChangeRaw string `json:"onchange"`
 	Prefix      string
 	Path        string
 	Keystore    string
@@ -36,7 +36,6 @@ type WatchConfig struct {
 }
 
 func applyDefaults(config *WatchConfig) {
-
 	if config.Consul.Addr == "" {
 		config.Consul.Addr = "127.0.0.1:8500"
 	}
@@ -55,9 +54,11 @@ func watchAndExec(config *WatchConfig) (int) {
 	for i := 0; i < len(config.Mappings); i++ {
 		go func(mappingConfig *MappingConfig) {
 
-			fmt.Printf("Got mapping config %v\n", mappingConfig)
+			if mappingConfig.OnChangeRaw != "" {
+				mappingConfig.OnChange = strings.Split(mappingConfig.OnChangeRaw, " ")
+			}
 
-			// TODO: Parse OnChangeRaw into OnChange if necessary.
+			fmt.Printf("Got mapping config %v\n", mappingConfig)
 
 			returnCode, err := watchMappingAndExec(&config.Consul, mappingConfig)
 			if err != nil {
