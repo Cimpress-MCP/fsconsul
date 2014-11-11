@@ -82,9 +82,9 @@ func realMain() int {
 		}
 
 		config := WatchConfig{
-			Consul: ConsulConfig {
-				Addr: consulAddr,
-				DC: consulDC,
+			Consul: ConsulConfig{
+				Addr:  consulAddr,
+				DC:    consulDC,
 				Token: token,
 			},
 			Mappings: make([]MappingConfig, len(prefixes)),
@@ -92,10 +92,10 @@ func realMain() int {
 
 		for i := 0; i < len(prefixes); i++ {
 			config.Mappings[i] = MappingConfig{
-				Prefix:     prefixes[i],
-				Path:       paths[i],
-				Keystore:   keystore,
-				OnChange:   onChange,
+				Prefix:   prefixes[i],
+				Path:     paths[i],
+				Keystore: keystore,
+				OnChange: onChange,
 			}
 		}
 	}

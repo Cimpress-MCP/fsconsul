@@ -16,9 +16,9 @@ import (
 
 // Configuration for Consul
 type ConsulConfig struct {
-	Addr       string
-	DC         string
-	Token      string
+	Addr  string
+	DC    string
+	Token string
 }
 
 // Configuration for all mappings from KV to fs managed by this process.
@@ -31,8 +31,8 @@ type MappingConfig struct {
 }
 
 type WatchConfig struct {
-	Consul     ConsulConfig
-	Mappings   []MappingConfig
+	Consul   ConsulConfig
+	Mappings []MappingConfig
 }
 
 func applyDefaults(config *WatchConfig) {
@@ -42,7 +42,7 @@ func applyDefaults(config *WatchConfig) {
 }
 
 // Queue watchers
-func watchAndExec(config *WatchConfig) (int) {
+func watchAndExec(config *WatchConfig) int {
 
 	applyDefaults(config)
 
@@ -73,7 +73,7 @@ func watchAndExec(config *WatchConfig) (int) {
 	for i := 0; i < len(config.Mappings); i++ {
 		fmt.Println(<-returnCodes)
 	}
-	return -1;
+	return -1
 }
 
 // Connects to Consul and watches a given K/V prefix and uses that to
