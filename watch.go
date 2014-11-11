@@ -48,7 +48,7 @@ func watchAndExec(config *WatchConfig) (int) {
 
 	returnCodes := make(chan int)
 
-	fmt.Printf("Starting watchers with Consul globals %v\n", config.Consul)
+	fmt.Printf("Starting watchers with Consul globals %+v\n", config.Consul)
 
 	// Fork a separate goroutine for each prefix/path pair
 	for i := 0; i < len(config.Mappings); i++ {
@@ -88,6 +88,11 @@ func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfi
 		return 0, err
 	}
 
+	// If prefix starts with /, trim it.
+	if mappingConfig.Prefix[0] == '/' {
+		mappingConfig.Prefix = mappingConfig.Prefix[1:]
+	}
+
 	// If the config path is lacking a trailing separator, add it.
 	if mappingConfig.Path[len(mappingConfig.Path)-1] != os.PathSeparator {
 		mappingConfig.Path += string(os.PathSeparator)
@@ -125,7 +130,9 @@ func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfi
 
 		newEnv := make(map[string]string)
 		for _, pair := range pairs {
+			fmt.Println(pair.Key)
 			k := strings.TrimPrefix(pair.Key, mappingConfig.Prefix)
+			fmt.Println(k)
 			k = strings.TrimLeft(k, "/")
 			newEnv[k] = string(pair.Value)
 		}
