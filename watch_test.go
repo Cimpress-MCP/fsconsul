@@ -37,8 +37,7 @@ var configFileTests = []struct {
 			"mappings" : [{
 				"onchange": "date",
 				"prefix": "gotest/",
-				"path": "/tmp/",
-				"keystore": "/Users/wrb/tmp/cicero_keys/"
+				"path": "/tmp/"
 			}]
 		}`,
 		"simple_file",
