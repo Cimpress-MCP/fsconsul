@@ -60,7 +60,7 @@ func TestConfigFiles(t *testing.T) {
 		client := makeConsulClient(t)
 		kv := client.KV()
 
-		key :=  test.prefix + "/" + test.key
+		key := test.prefix + "/" + test.key
 
 		token := os.Getenv("TOKEN")
 		dc := os.Getenv("DC")
