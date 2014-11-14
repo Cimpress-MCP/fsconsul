@@ -36,7 +36,7 @@ var configFileTests = []struct {
 		`{
 			"mappings" : [{
 				"onchange": "date",
-				"prefix": "simple_file/",
+				"prefix": "simple_file",
 				"path": "/tmp/"
 			}]
 		}`,
@@ -84,10 +84,7 @@ func TestConfigFiles(t *testing.T) {
 				t.Fatalf("Failed to parse JSON due to %v", err)
 			}
 
-			config.Mappings[0] = MappingConfig{
-				Path:   tempDir + "/",
-				Prefix: test.prefix,
-			}
+			config.Mappings[0].Path = tempDir + "/"
 
 			rvalue := watchAndExec(&config)
 			if rvalue == -1 {
