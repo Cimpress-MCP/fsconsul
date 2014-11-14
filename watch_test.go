@@ -36,8 +36,7 @@ var configFileTests = []struct {
 		`{
 			"mappings" : [{
 				"onchange": "date",
-				"prefix": "simple_file",
-				"path": "/tmp/"
+				"prefix": "simple_file"
 			}]
 		}`,
 		"simple_file",
