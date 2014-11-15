@@ -147,9 +147,6 @@ func TestAddFile(t *testing.T) {
 
 	tempDir := createTempDir(t)
 
-	client := makeConsulClient(t)
-	kv := client.KV()
-
 	key := "gotest/randombytes/entry"
 
 	token := os.Getenv("TOKEN")
@@ -158,17 +155,8 @@ func TestAddFile(t *testing.T) {
 		dc = "dc1"
 	}
 
-	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
-
-	// Delete all keys in the "gotest" KV space
-	if _, err := kv.DeleteTree("gotest", writeOptions); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	// Run the fsconsul listener in the background
 	go func() {
-
-		//consulConfig :=
 
 		config := WatchConfig{
 			Consul: ConsulConfig{
@@ -195,13 +183,7 @@ func TestAddFile(t *testing.T) {
 
 	}()
 
-	// Put a test KV
-	encodedValue := make([]byte, base64.StdEncoding.EncodedLen(1024))
-	base64.StdEncoding.Encode(encodedValue, createRandomBytes(1024))
-	p := &consulapi.KVPair{Key: key, Flags: 42, Value: encodedValue}
-	if _, err := kv.Put(p, writeOptions); err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	encodedValue := writeToConsul(t, "gotest", key)
 
 	// Give ourselves a little bit of time for the watcher to read the file
 	time.Sleep(100 * time.Millisecond)
