@@ -41,6 +41,35 @@ func createTempDir(t *testing.T) string {
 	return tempDir
 }
 
+func writeToConsul(t *testing.T, prefix, key string) []byte {
+
+	token := os.Getenv("TOKEN")
+	dc := os.Getenv("DC")
+	if dc == "" {
+		dc = "dc1"
+	}
+
+	client := makeConsulClient(t)
+	kv := client.KV()
+
+	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
+
+	// Delete all keys in the prefixed KV space
+	if _, err := kv.DeleteTree(prefix, writeOptions); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Put a test KV
+	encodedValue := make([]byte, base64.StdEncoding.EncodedLen(1024))
+	base64.StdEncoding.Encode(encodedValue, createRandomBytes(1024))
+	p := &consulapi.KVPair{Key: key, Flags: 42, Value: encodedValue}
+	if _, err := kv.Put(p, writeOptions); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	return encodedValue
+}
+
 var configFileTests = []struct {
 	json, prefix, key string
 }{
@@ -71,25 +100,9 @@ func TestConfigFiles(t *testing.T) {
 
 		tempDir := createTempDir(t)
 
-		client := makeConsulClient(t)
-		kv := client.KV()
-
 		key := test.prefix + "/" + test.key
 
-		token := os.Getenv("TOKEN")
-		dc := os.Getenv("DC")
-		if dc == "" {
-			dc = "dc1"
-		}
-
-		writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
-
 		fmt.Println("Starting test with key", key)
-
-		// Delete all keys in the prefixed KV space
-		if _, err := kv.DeleteTree(test.prefix, writeOptions); err != nil {
-			t.Fatalf("err: %v", err)
-		}
 
 		// Run the fsconsul listener in the background
 		go func() {
@@ -114,13 +127,7 @@ func TestConfigFiles(t *testing.T) {
 
 		}()
 
-		// Put a test KV
-		encodedValue := make([]byte, base64.StdEncoding.EncodedLen(1024))
-		base64.StdEncoding.Encode(encodedValue, createRandomBytes(1024))
-		p := &consulapi.KVPair{Key: key, Flags: 42, Value: encodedValue}
-		if _, err := kv.Put(p, writeOptions); err != nil {
-			t.Fatalf("err: %v", err)
-		}
+		encodedValue := writeToConsul(t, test.prefix, key)
 
 		// Give ourselves a little bit of time for the watcher to read the file
 		time.Sleep(100 * time.Millisecond)
