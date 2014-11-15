@@ -71,7 +71,7 @@ func writeToConsul(t *testing.T, prefix, key string) []byte {
 }
 
 var configBlobs = []struct {
-	json, prefix, key string
+	json, key string
 }{
 	{
 		`{
@@ -80,7 +80,6 @@ var configBlobs = []struct {
 				"prefix": "simple_file"
 			}]
 		}`,
-		"simple_file",
 		"randomEntry",
 	}, {
 		`{
@@ -89,7 +88,6 @@ var configBlobs = []struct {
 				"prefix": "nested/file"
 			}]
 		}`,
-		"nested/file",
 		"simple_file",
 	}, {
 		`{
@@ -98,7 +96,6 @@ var configBlobs = []struct {
 				"prefix": "gotest/randombytes"
 			}]
 		}`,
-		"gotest/randombytes",
 		"entry",
 	},
 }
@@ -109,19 +106,19 @@ func TestConfigBlobs(t *testing.T) {
 
 		tempDir := createTempDir(t)
 
-		key := test.prefix + "/" + test.key
+		var config WatchConfig
+
+		err := json.Unmarshal([]byte(test.json), &config)
+		if err != nil {
+			t.Fatalf("Failed to parse JSON due to %v", err)
+		}
+
+		key := config.Mappings[0].Prefix + "/" + test.key
 
 		fmt.Println("Starting test with key", key)
 
 		// Run the fsconsul listener in the background
 		go func() {
-
-			var config WatchConfig
-
-			err := json.Unmarshal([]byte(test.json), &config)
-			if err != nil {
-				t.Fatalf("Failed to parse JSON due to %v", err)
-			}
 
 			config.Mappings[0].Path = tempDir + "/"
 
@@ -136,7 +133,7 @@ func TestConfigBlobs(t *testing.T) {
 
 		}()
 
-		encodedValue := writeToConsul(t, test.prefix, key)
+		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key)
 
 		// Give ourselves a little bit of time for the watcher to read the file
 		time.Sleep(100 * time.Millisecond)
