@@ -42,7 +42,7 @@ var configFileTests = []struct {
 		}`,
 		"simple_file",
 		"randomEntry",
-	},{
+	}, {
 		`{
 			"mappings" : [{
 				"onchange": "date",
