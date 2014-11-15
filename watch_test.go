@@ -137,12 +137,8 @@ func TestConfigFiles(t *testing.T) {
 }
 
 func TestAddFile(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "fsconsul_test")
-	defer os.RemoveAll(tempDir)
 
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
+	tempDir := createTempDir(t)
 
 	client := makeConsulClient(t)
 	kv := client.KV()
