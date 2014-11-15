@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -41,6 +42,15 @@ var configFileTests = []struct {
 		}`,
 		"simple_file",
 		"randomEntry",
+	},{
+		`{
+			"mappings" : [{
+				"onchange": "date",
+				"prefix": "nested/file"
+			}]
+		}`,
+		"nested/file",
+		"simple_file",
 	},
 }
 
@@ -68,7 +78,9 @@ func TestConfigFiles(t *testing.T) {
 
 		writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
 
-		// Delete all keys in the "gotest" KV space
+		fmt.Println("Starting test with key", key)
+
+		// Delete all keys in the prefixed KV space
 		if _, err := kv.DeleteTree(test.prefix, writeOptions); err != nil {
 			t.Fatalf("err: %v", err)
 		}
