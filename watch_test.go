@@ -30,6 +30,17 @@ func makeConsulClient(t *testing.T) *consulapi.Client {
 	return client
 }
 
+func createTempDir(t *testing.T) string {
+	tempDir, err := ioutil.TempDir("", "fsconsul_test")
+	defer os.RemoveAll(tempDir)
+
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	return tempDir
+}
+
 var configFileTests = []struct {
 	json, prefix, key string
 }{
@@ -58,12 +69,7 @@ func TestConfigFiles(t *testing.T) {
 
 	for _, test := range configFileTests {
 
-		tempDir, err := ioutil.TempDir("", "fsconsul_test")
-		defer os.RemoveAll(tempDir)
-
-		if err != nil {
-			t.Fatalf("Failed to create temp dir: %v", err)
-		}
+		tempDir := createTempDir(t)
 
 		client := makeConsulClient(t)
 		kv := client.KV()
@@ -90,7 +96,7 @@ func TestConfigFiles(t *testing.T) {
 
 			var config WatchConfig
 
-			err = json.Unmarshal([]byte(test.json), &config)
+			err := json.Unmarshal([]byte(test.json), &config)
 			if err != nil {
 				t.Fatalf("Failed to parse JSON due to %v", err)
 			}
