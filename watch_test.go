@@ -70,7 +70,7 @@ func writeToConsul(t *testing.T, prefix, key string) []byte {
 	return encodedValue
 }
 
-var configFileTests = []struct {
+var configBlobs = []struct {
 	json, prefix, key string
 }{
 	{
@@ -91,12 +91,21 @@ var configFileTests = []struct {
 		}`,
 		"nested/file",
 		"simple_file",
+	}, {
+		`{
+			"mappings" : [{
+				"onchange": "date",
+				"prefix": "gotest/randombytes"
+			}]
+		}`,
+		"gotest/randombytes",
+		"entry",
 	},
 }
 
-func TestConfigFiles(t *testing.T) {
+func TestConfigBlobs(t *testing.T) {
 
-	for _, test := range configFileTests {
+	for _, test := range configBlobs {
 
 		tempDir := createTempDir(t)
 
@@ -140,60 +149,5 @@ func TestConfigFiles(t *testing.T) {
 		if !bytes.Equal(encodedValue, fileValue) {
 			t.Fatal("Unmatched values")
 		}
-	}
-}
-
-func TestAddFile(t *testing.T) {
-
-	tempDir := createTempDir(t)
-
-	key := "gotest/randombytes/entry"
-
-	token := os.Getenv("TOKEN")
-	dc := os.Getenv("DC")
-	if dc == "" {
-		dc = "dc1"
-	}
-
-	// Run the fsconsul listener in the background
-	go func() {
-
-		config := WatchConfig{
-			Consul: ConsulConfig{
-				Addr:  consulapi.DefaultConfig().Address,
-				DC:    dc,
-				Token: token,
-			},
-			Mappings: make([]MappingConfig, 1),
-		}
-
-		config.Mappings[0] = MappingConfig{
-			Path:   tempDir + "/",
-			Prefix: "gotest",
-		}
-
-		rvalue := watchAndExec(&config)
-		if rvalue == -1 {
-			t.Fatalf("Failed to run watchAndExec")
-		}
-
-		if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
-			t.Fatalf("Config path should have trailing spaces stripped")
-		}
-
-	}()
-
-	encodedValue := writeToConsul(t, "gotest", key)
-
-	// Give ourselves a little bit of time for the watcher to read the file
-	time.Sleep(100 * time.Millisecond)
-
-	fileValue, err := ioutil.ReadFile(path.Join(tempDir, "randombytes", "entry"))
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if !bytes.Equal(encodedValue, fileValue) {
-		t.Fatal("Unmatched values")
 	}
 }
