@@ -15,6 +15,32 @@ in its simplicity, name, and function.
 
 To install fsconsul, clone this repo into your go workspace and do a `go install`.
 
+## Configuration
+
+`fsconsul` can be configured entirely by command-line switches, but for more complex cases, you may wish to provide the path to a config JSON file as the -configFile switch.  The format of the JSON file is:
+
+```
+{
+	"consul" : {
+		"addr": "127.0.0.1:8500"
+		"dc": "dc1",
+		"token" : "my-reader-token"
+	},
+	"mappings" : [{
+		"onchange": "service restart app1",
+		"prefix": "/myteam/dev/app1/config/",
+		"path": "/etc/app1/",
+		"keystore": "/var/lib/encryption_keys"
+	},{
+		"onchange": "service restart app2",
+		"prefix": "/myteam/dev/app2/config/",
+		"path": "/etc/app2/",
+		"keystore": "/var/app2/encryption_keys"
+	}]
+}
+
+``` 
+
 Run `fsconsul` to see the usage help:
 
 ```
