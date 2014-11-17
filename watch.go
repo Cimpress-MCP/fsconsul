@@ -11,7 +11,7 @@ import (
 	"github.com/armed/mkdirp"
 	"github.com/armon/consul-api"
 
-	"github.com/ryanbreen/gosecret"
+	"github.com/cimpress-mcp/gosecret"
 )
 
 // Configuration for Consul
