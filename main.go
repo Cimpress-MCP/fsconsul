@@ -112,9 +112,10 @@ func usage() {
 const helpText = `
 Usage: %s [options] prefix path onchange
 
-  Write files to the specified location on the local system by reading K/V
-  from Consul's K/V store with the given prefix and execute a program on
-  any change.
+  Write files to the specified locations on the local system by reading K/V
+  from Consul's K/V store with the given prefixes and execute a program on
+  any change.  Prefixes and paths must be pipe-delimited if provided as
+  command-line switches.
 
 Options:
 `
