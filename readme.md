@@ -66,4 +66,4 @@ Options:
 
 Builds are automatically run by Travis on any push or pull request.
 
-![Travis Status](https://travis-ci.org/ryanbreen/fsconsul.svg?branch=master)
+![Travis Status](https://travis-ci.org/Cimpress-MCP/fsconsul.svg?branch=master)
