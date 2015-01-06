@@ -67,3 +67,7 @@ Options:
 Builds are automatically run by Travis on any push or pull request.
 
 ![Travis Status](https://travis-ci.org/Cimpress-MCP/fsconsul.svg?branch=master)
+
+## TODO
+
+* Once Consul 0.5 is out, support file deletes.
