@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/armed/mkdirp"
-	"github.com/armon/consul-api"
+	consulapi "github.com/hashicorp/consul/api"
 
 	"github.com/cimpress-mcp/gosecret"
 )
