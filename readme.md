@@ -46,19 +46,20 @@ Run `fsconsul` to see the usage help:
 ```
 
 $ fsconsul
-Usage: fsconsul [options] prefixes paths onchange...
+Usage: fsconsul [options] prefix path onchange
 
-  Write files to the specified locations on the local system by reading K/V
-  from Consul's K/V store with the given prefixes and execute a program on
+  Write files to the specified locations on the local system by reading K/Vs
+  from Consul's K/V store with the given prefixes and executing a program on
   any change.  Prefixes and paths must be pipe-delimited if provided as
   command-line switches.
 
 Options:
 
+  -addr="": consul HTTP API address with port
   -configFile="": json file containing all configuration (if this is provided, all other config is ignored)
-  -addr="127.0.0.1:8500": consul HTTP API address with port
   -dc="": consul datacenter, uses local if blank
   -keystore="": directory of keys used for decryption
+  -once=false: run once and exit
   -token="": token to use for ACL access
 ```
 

@@ -31,6 +31,7 @@ type MappingConfig struct {
 }
 
 type WatchConfig struct {
+	RunOnce  bool
 	Consul   ConsulConfig
 	Mappings []MappingConfig
 }
@@ -48,8 +49,6 @@ func watchAndExec(config *WatchConfig) int {
 
 	returnCodes := make(chan int)
 
-	fmt.Printf("Starting watchers with Consul globals %+v\n", config.Consul)
-
 	// Fork a separate goroutine for each prefix/path pair
 	for i := 0; i < len(config.Mappings); i++ {
 		go func(mappingConfig *MappingConfig) {
@@ -60,7 +59,7 @@ func watchAndExec(config *WatchConfig) int {
 
 			fmt.Printf("Got mapping config %v\n", mappingConfig)
 
-			returnCode, err := watchMappingAndExec(&config.Consul, mappingConfig)
+			returnCode, err := watchMappingAndExec(config, mappingConfig)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 			}
@@ -78,7 +77,10 @@ func watchAndExec(config *WatchConfig) int {
 
 // Connects to Consul and watches a given K/V prefix and uses that to
 // write to the filesystem.
-func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfig) (int, error) {
+func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int, error) {
+
+	consulConfig := config.Consul
+
 	kvConfig := consulapi.DefaultConfig()
 	kvConfig.Address = consulConfig.Addr
 	kvConfig.Datacenter = consulConfig.DC
@@ -112,7 +114,12 @@ func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfi
 	errCh := make(chan error, 1)
 	pairCh := make(chan consulapi.KVPairs)
 	quitCh := make(chan struct{})
-	defer close(quitCh)
+
+	// Defer close of quitCh if we're running more than once
+	if !config.RunOnce {
+		defer close(quitCh)
+	}
+
 	go watch(
 		client, mappingConfig.Prefix, mappingConfig.Path, consulConfig.Token, pairCh, errCh, quitCh)
 
@@ -215,10 +222,24 @@ func watchMappingAndExec(consulConfig *ConsulConfig, mappingConfig *MappingConfi
 			var cmd = exec.Command(mappingConfig.OnChange[0], mappingConfig.OnChange[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			err := cmd.Start()
+			// If we are invoking RunOnce, we wait for the command to complete to avoid a
+			// condition where the process exit of fsconsul prematurely kills the child process.
+			var err error
+			if config.RunOnce {
+				err = cmd.Run()
+			} else {
+				err = cmd.Start()
+			}
+
 			if err != nil {
 				return 111, err
 			}
+		}
+
+		// If we are only running once, close the channel on this watcher.
+		if config.RunOnce {
+			close(quitCh)
+			return 0, nil
 		}
 	}
 }

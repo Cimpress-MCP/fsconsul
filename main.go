@@ -20,6 +20,7 @@ func realMain() int {
 	var keystore string
 	var token string
 	var configFile string
+	var once bool
 
 	// This will hold the configuration, whether it's resolved from command-line or JSON.
 	var config WatchConfig
@@ -37,6 +38,9 @@ func realMain() int {
 	flag.StringVar(
 		&token, "token", "",
 		"token to use for ACL access")
+	flag.BoolVar(
+		&once, "once", false,
+		"run once and exit")
 	flag.StringVar(
 		&configFile, "configFile", "",
 		"json file containing all configuration (if this is provided, all other config is ignored)")
@@ -81,7 +85,8 @@ func realMain() int {
 			return 1
 		}
 
-		config := WatchConfig{
+		config = WatchConfig{
+			RunOnce: once,
 			Consul: ConsulConfig{
 				Addr:  consulAddr,
 				DC:    consulDC,
@@ -112,8 +117,8 @@ func usage() {
 const helpText = `
 Usage: %s [options] prefix path onchange
 
-  Write files to the specified locations on the local system by reading K/V
-  from Consul's K/V store with the given prefixes and execute a program on
+  Write files to the specified locations on the local system by reading K/Vs
+  from Consul's K/V store with the given prefixes and executing a program on
   any change.  Prefixes and paths must be pipe-delimited if provided as
   command-line switches.
 
