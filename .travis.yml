@@ -16,8 +16,7 @@ script:
 - gox -build-toolchain -osarch="linux/amd64 darwin/amd64 windows/amd64"
 - gox -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="linux/amd64 darwin/amd64 windows/amd64"
 after_success:
-- echo $BINTRAY_KEY | shasum
-- curl -T build/darwin/amd64/fsconsul -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_JOB_NUMBER/$TRAVIS_JOB_NUMBER/darwin-amd64/fsconsul
+- curl -T build/darwin/amd64/fsconsul -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_JOB_NUMBER/darwin-amd64/fsconsul
 env:
   global:
   - secure: E3uZL0mrudFxOowDIt+ruTlg5HVZJyGRXoZ/XwLG0ukW+T+Zhh81B7PTiWM2DO34OIcHRYozqutn+P9gf/avJ+2K7I0gWc/8peLff7tn+bWGtY9UNMCF328KTlKEDUW86QcxM50cGblLCKq1R+K7UnpJP8cePvTqD0z/3zA4wyo=
