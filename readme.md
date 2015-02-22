@@ -73,7 +73,7 @@ Builds are automatically run by Travis on any push or pull request.
 
 Tagged builds are automatically published to bintray for OS X, Linux, and Windows.
 
-![Download](https://api.bintray.com/packages/cimpress-mcp/Go/fsconsul/images/download.svg) ](https://bintray.com/cimpress-mcp/Go/fsconsul/_latestVersion#files)
+[ ![Download](https://api.bintray.com/packages/cimpress-mcp/Go/fsconsul/images/download.svg) ](https://bintray.com/cimpress-mcp/Go/fsconsul/_latestVersion#files)
 
 ## TODO
 
