@@ -19,7 +19,7 @@ after_success:
 - gox -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="linux/amd64 darwin/amd64 windows/amd64"
 - curl -T build/darwin/amd64/fsconsul -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_TAG/darwin-amd64/fsconsul
 - curl -T build/linux/amd64/fsconsul -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_TAG/linux-amd64/fsconsul
-- curl -T build/windows/amd64/fsconsul -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_TAG/windows-amd64/fsconsul
+- curl -T build/windows/amd64/fsconsul.exe -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_TAG/windows-amd64/fsconsul.exe
 - curl -XPOST -uryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/Go/fsconsul/$TRAVIS_TAG/publish
 env:
   global:
