@@ -1,21 +1,22 @@
 language: go
-
 sudo: false
-
 go:
-    - 1.4
-
+- 1.4
 before_script:
-  - wget  https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip
-  - unzip 0.5.0_linux_amd64.zip
-  - mkdir consul_data
-  - ./consul agent -server -bootstrap -data-dir=consul_data &
-  - sleep 5
-  - git config --global user.email "ryan@ryanbreen.com"
-  - git config --global user.name "Ryan Breen"
-
+- wget  https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip
+- unzip 0.5.0_linux_amd64.zip
+- mkdir consul_data
+- ./consul agent -server -bootstrap -data-dir=consul_data &
+- sleep 5
+- git config --global user.email "ryan@ryanbreen.com"
+- git config --global user.name "Ryan Breen"
 script:
-  - go test
-  - go get -x github.com/mitchellh/gox
-  - gox -build-toolchain -osarch="linux/amd64 darwin/amd64 windows/amd64" -verbose
-  - gox -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="linux/amd64 darwin/amd64 windows/amd64"
+- go test
+- go get -x github.com/mitchellh/gox
+- gox -build-toolchain -osarch="linux/amd64 darwin/amd64 windows/amd64"
+- gox -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="linux/amd64 darwin/amd64 windows/amd64"
+after_success:
+- curl -T build/darwin/amd64/fsconsul -ryanbreen:$BINTRAY_KEY https://api.bintray.com/content/cimpress-mcp/fsconsul/$TRAVIS_JOB_NUMBER/$TRAVIS_JOB_NUMBER/darwin-amd64/fsconsul
+env:
+  global:
+  - secure: E3uZL0mrudFxOowDIt+ruTlg5HVZJyGRXoZ/XwLG0ukW+T+Zhh81B7PTiWM2DO34OIcHRYozqutn+P9gf/avJ+2K7I0gWc/8peLff7tn+bWGtY9UNMCF328KTlKEDUW86QcxM50cGblLCKq1R+K7UnpJP8cePvTqD0z/3zA4wyo=
