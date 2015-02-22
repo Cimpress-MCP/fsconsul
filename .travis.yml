@@ -3,11 +3,11 @@ language: go
 sudo: false
 
 go:
-    - 1.3
+    - 1.4
 
 before_script:
-  - wget  https://dl.bintray.com/mitchellh/consul/0.4.0_linux_amd64.zip
-  - unzip 0.4.0_linux_amd64.zip
+  - wget  https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip
+  - unzip 0.5.0_linux_amd64.zip
   - mkdir consul_data
   - ./consul agent -server -bootstrap -data-dir=consul_data &
   - sleep 5
@@ -16,4 +16,6 @@ before_script:
 
 script:
   - go test
-  - go install
+  - go get -x github.com/mitchellh/gox
+  - gox -build-toolchain -osarch="linux/amd64 darwin/amd64 windows/amd64" -verbose
+  - gox -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="linux/amd64 darwin/amd64 windows/amd64"
