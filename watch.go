@@ -150,17 +150,23 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			continue
 		}
 
-		// Blocked by KV().List bug, will not rebuild unless all keys deleted ATM, so we
-		// are disabling deletes.
-		// TODO: Make this more granular: only delete keys that were deleted based on the
-		// tombstones contained in a future version of Consul.
-		/**
-		if _, err := os.Stat(config.Path); err == nil {
-			os.RemoveAll(config.Path)
-			mkdirp.Mk(config.Path, 0777)
-			fmt.Println("Tree rebuild triggered")
+		// Iterate over all objects in the current env.  If they are not in the newEnv, they
+		// were deleted from Consul and should be deleted from disk.
+		for k, _ := range env {
+			if _, ok := newEnv[k] ; !ok {
+				fmt.Println("key deleted:", k)
+				// Write file to disk
+				keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)
+				if isWindows {
+					keyfile = strings.Replace(keyfile, "/", "\\", -1)
+				}
+
+				err := os.Remove(keyfile)
+				if err != nil {
+					fmt.Println("Failed to delete key file", err)
+				}
+			}
 		}
-		**/
 
 		// Replace the env so we can detect future changes
 		env = newEnv
