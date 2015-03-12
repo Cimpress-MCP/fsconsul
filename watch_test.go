@@ -70,6 +70,23 @@ func writeToConsul(t *testing.T, prefix, key string) []byte {
 	return encodedValue
 }
 
+func deleteKeyFromConsul(t *testing.T, key string) {
+
+	token := os.Getenv("TOKEN")
+	dc := os.Getenv("DC")
+	if dc == "" {
+		dc = "dc1"
+	}
+
+	client := makeConsulClient(t)
+	kv := client.KV()
+
+	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
+	if _, err := kv.Delete(key, writeOptions); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 var configBlobs = []struct {
 	json, key string
 }{
@@ -145,6 +162,96 @@ func TestConfigBlobs(t *testing.T) {
 
 		if !bytes.Equal(encodedValue, fileValue) {
 			t.Fatal("Unmatched values")
+		}
+	}
+}
+
+var deleteableConfigBlobs = []struct {
+	json, key string
+}{
+	{
+		`{
+			"mappings" : [{
+				"onchange": "date",
+				"prefix": "simple_file"
+			}]
+		}`,
+		"randomEntry",
+	}, {
+		`{
+			"mappings" : [{
+				"onchange": "date",
+				"prefix": "nested/file"
+			}]
+		}`,
+		"simple_file",
+	}, {
+		`{
+			"mappings" : [{
+				"onchange": "date",
+				"prefix": "gotest/randombytes"
+			}]
+		}`,
+		"entry",
+	},
+}
+
+func TestConfigBlobsForDelete(t *testing.T) {
+
+	for _, test := range deleteableConfigBlobs {
+
+		tempDir := createTempDir(t)
+
+		var config WatchConfig
+
+		err := json.Unmarshal([]byte(test.json), &config)
+		if err != nil {
+			t.Fatalf("Failed to parse JSON due to %v", err)
+		}
+
+		key := config.Mappings[0].Prefix + "/" + test.key
+
+		fmt.Println("Starting test with key", key)
+
+		// Run the fsconsul listener in the background
+		go func() {
+
+			config.Mappings[0].Path = tempDir + "/"
+
+			rvalue := watchAndExec(&config)
+			if rvalue == -1 {
+				t.Fatalf("Failed to run watchAndExec")
+			}
+
+			if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
+				t.Fatalf("Config path should have trailing spaces stripped")
+			}
+
+		}()
+
+		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key)
+
+		// Give ourselves a little bit of time for the watcher to read the file
+		time.Sleep(100 * time.Millisecond)
+
+		keyfilePath := path.Join(tempDir, test.key)
+
+		fileValue, err := ioutil.ReadFile(keyfilePath)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !bytes.Equal(encodedValue, fileValue) {
+			t.Fatal("Unmatched values")
+		}
+
+		deleteKeyFromConsul(t, key)
+
+		// Give ourselves a little bit of time for the watcher to delete the file
+		time.Sleep(100 * time.Millisecond)
+
+		if _, err := os.Stat(keyfilePath); os.IsExist(err) {
+			t.Fatalf("Key file still exists even after delete")
 		}
 	}
 }
