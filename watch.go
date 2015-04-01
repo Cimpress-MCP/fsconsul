@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -57,11 +58,11 @@ func watchAndExec(config *WatchConfig) int {
 				mappingConfig.OnChange = strings.Split(mappingConfig.OnChangeRaw, " ")
 			}
 
-			fmt.Printf("Got mapping config %v\n", mappingConfig)
+			log.Printf("[DEBUG] Got mapping config %v", mappingConfig)
 
 			returnCode, err := watchMappingAndExec(config, mappingConfig)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				log.Println("[ERR]:", err)
 			}
 
 			returnCodes <- returnCode
@@ -70,7 +71,7 @@ func watchAndExec(config *WatchConfig) int {
 
 	// Wait for completion of all forked go routines
 	for i := 0; i < len(config.Mappings); i++ {
-		fmt.Println(<-returnCodes)
+		log.Println(<-returnCodes)
 	}
 	return -1
 }
@@ -137,9 +138,8 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 		newEnv := make(map[string]string)
 		for _, pair := range pairs {
-			fmt.Println(pair.Key)
+			log.Println("[DEBUG]: key ==", pair.Key)
 			k := strings.TrimPrefix(pair.Key, mappingConfig.Prefix)
-			fmt.Println(k)
 			k = strings.TrimLeft(k, "/")
 			newEnv[k] = string(pair.Value)
 		}
@@ -154,7 +154,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 		// were deleted from Consul and should be deleted from disk.
 		for k, _ := range env {
 			if _, ok := newEnv[k] ; !ok {
-				fmt.Println("key deleted:", k)
+				log.Println("[DEBUG]: key deleted:", k)
 				// Write file to disk
 				keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)
 				if isWindows {
@@ -163,15 +163,13 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 				err := os.Remove(keyfile)
 				if err != nil {
-					fmt.Println("Failed to delete key file", err)
+					log.Println("[ERR]: Failed to delete key file", err)
 				}
 			}
 		}
 
 		// Replace the env so we can detect future changes
 		env = newEnv
-
-		//fmt.Println(env)
 
 		// Write the updated keys to the filesystem at the specified path
 		for k, v := range newEnv {
@@ -184,41 +182,41 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 				// mkdirp the file's path
 				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "\\")], 0777)
 				if err != nil {
-					fmt.Println("Failed to create parent directory for key", err)
+					log.Println("[ERR]: Failed to create parent directory for key", err)
 				}
 			} else {
 				// mkdirp the file's path
 				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
 				if err != nil {
-					fmt.Println("Failed to create parent directory for key", err)
+					log.Println("[ERR]: Failed to create parent directory for key", err)
 				}
 			}
 
 			f, err := os.Create(keyfile)
 			if err != nil {
-				fmt.Printf("Failed to create file %s due to %s\n", keyfile, err)
+				log.Printf("[ERR]: Failed to create file %s due to %s", keyfile, err)
 				continue
 			}
 
 			defer f.Close()
 
-			fmt.Println("Input value length:", len(v))
+			log.Println("[DEBUG]: Input value length:", len(v))
 
 			decryptedValue, err := gosecret.DecryptTags([]byte(v), mappingConfig.Keystore)
 			if err != nil {
-				fmt.Println("Failed to decrypt value due to", err)
+				log.Println("[ERR]: Failed to decrypt value due to", err)
 				decryptedValue = []byte(v)
 			}
 
-			fmt.Println("Output length:", len(decryptedValue))
+			log.Println("[DEBUG]: Output length:", len(decryptedValue))
 
 			wrote, err := f.Write(decryptedValue)
 			if err != nil {
-				fmt.Printf("Failed to write to file %s due to %s\n", keyfile, err)
+				log.Printf("[ERR]: Failed to write to file %s due to %s", keyfile, err)
 				continue
 			}
 
-			fmt.Printf("Successfully wrote %d bytes to %s\n", wrote, keyfile)
+			log.Printf("[INFO]: Successfully wrote %d bytes to %s", wrote, keyfile)
 
 			f.Sync()
 		}
@@ -292,12 +290,12 @@ func watch(
 
 		if err != nil {
 			// This happens when the connection to the consul agent dies.  Build in a retry by looping after a delay.
-			fmt.Println("Error communicating with consul agent.")
+			log.Println("[WARN]: Error communicating with consul agent.")
 			continue
 		}
 
 		pairCh <- pairs
-		fmt.Printf("curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
+		log.Printf("[DEBUG]: curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
 		curIndex = meta.LastIndex
 	}
 }
