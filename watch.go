@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
@@ -20,6 +24,10 @@ type ConsulConfig struct {
 	Addr  string
 	DC    string
 	Token string
+
+	KeyFile  string
+	CertFile string
+	CAFile   string
 }
 
 // Configuration for all mappings from KV to fs managed by this process.
@@ -85,6 +93,34 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 	kvConfig := consulapi.DefaultConfig()
 	kvConfig.Address = consulConfig.Addr
 	kvConfig.Datacenter = consulConfig.DC
+
+	if consulConfig.CertFile != "" && consulConfig.KeyFile != "" && consulConfig.CAFile != "" {
+		var (
+			cert tls.Certificate
+			err  error
+
+			certPool = x509.NewCertPool()
+		)
+
+		if data, err := ioutil.ReadFile(consulConfig.CAFile); err != nil {
+			return 0, err
+		} else if !certPool.AppendCertsFromPEM(data) {
+			return 0, fmt.Errorf("Invalid certificate file: %s", consulConfig.CAFile)
+		}
+
+		if cert, err = tls.LoadX509KeyPair(consulConfig.CertFile, consulConfig.KeyFile); err != nil {
+			return 0, err
+		}
+		kvConfig.Scheme = "https"
+		kvConfig.HttpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs:      certPool,
+					Certificates: []tls.Certificate{cert},
+				},
+			},
+		}
+	}
 
 	client, err := consulapi.NewClient(kvConfig)
 	if err != nil {
@@ -153,7 +189,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 		// Iterate over all objects in the current env.  If they are not in the newEnv, they
 		// were deleted from Consul and should be deleted from disk.
 		for k, _ := range env {
-			if _, ok := newEnv[k] ; !ok {
+			if _, ok := newEnv[k]; !ok {
 				log.Println("[DEBUG]: key deleted:", k)
 				// Write file to disk
 				keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)
