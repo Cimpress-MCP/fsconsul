@@ -115,7 +115,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 		tlsConfig.RootCAs = certPool
 	}
 
-	// Check if TLS was configured for Consul
+	// Check if TLS was configured for client-side verification
 	if consulConfig.CertFile != "" && consulConfig.KeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(consulConfig.CertFile, consulConfig.KeyFile)
 		if err != nil {
