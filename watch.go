@@ -90,6 +90,7 @@ func buildClient(consulConfig ConsulConfig) (*http.Client, error) {
 	tlsConfig := &tls.Config{}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: transport}
+
 	// Check if the user defined a specific CA to use
 	if consulConfig.CAFile != "" {
 		certPool := x509.NewCertPool()
