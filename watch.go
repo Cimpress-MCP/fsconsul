@@ -86,9 +86,36 @@ func watchAndExec(config *WatchConfig) int {
 	return -1
 }
 
+func buildClient(consulConfig ConsulConfig) (*http.Client, error) {
+	tlsConfig := &tls.Config{}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	// Check if the user defined a specific CA to use
+	if consulConfig.CAFile != "" {
+		certPool := x509.NewCertPool()
+		if data, err := ioutil.ReadFile(consulConfig.CAFile); err != nil {
+			return nil, err
+		} else if !certPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("Invalid certificate file: %s", consulConfig.CAFile)
+		}
+		tlsConfig.RootCAs = certPool
+	}
+
+	// Check if TLS was configured for client-side verification
+	if consulConfig.CertFile != "" && consulConfig.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(consulConfig.CertFile, consulConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	return client, nil
+}
+
 // Connects to Consul and watches a given K/V prefix and uses that to
 // write to the filesystem.
 func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int, error) {
+	var err error
 
 	consulConfig := config.Consul
 
@@ -104,24 +131,9 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 		kvConfig.Scheme = "https"
 	}
 
-	// Check if the user defined a specific CA to use
-	if consulConfig.CAFile != "" {
-		certPool := x509.NewCertPool()
-		if data, err := ioutil.ReadFile(consulConfig.CAFile); err != nil {
-			return 0, err
-		} else if !certPool.AppendCertsFromPEM(data) {
-			return 0, fmt.Errorf("Invalid certificate file: %s", consulConfig.CAFile)
-		}
-		tlsConfig.RootCAs = certPool
-	}
-
-	// Check if TLS was configured for client-side verification
-	if consulConfig.CertFile != "" && consulConfig.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(consulConfig.CertFile, consulConfig.KeyFile)
-		if err != nil {
-			return 0, err
-		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
+	kvConfig.HttpClient, err = buildClient(consulConfig)
+	if err != nil {
+		return 0, err
 	}
 
 	client, err := consulapi.NewClient(kvConfig)
