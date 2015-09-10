@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
@@ -15,14 +19,19 @@ import (
 	gosecret "github.com/cimpress-mcp/gosecret/api"
 )
 
-// Configuration for Consul
+// ConsulConfig holds the configuration for Consul
 type ConsulConfig struct {
 	Addr  string
 	DC    string
 	Token string
+
+	KeyFile  string
+	CertFile string
+	CAFile   string
+	UseTLS   bool
 }
 
-// Configuration for all mappings from KV to fs managed by this process.
+// MappingConfig holds configuration for all mappings from KV to fs managed by this process.
 type MappingConfig struct {
 	OnChange    []string
 	OnChangeRaw string `json:"onchange"`
@@ -31,6 +40,7 @@ type MappingConfig struct {
 	Keystore    string
 }
 
+// WatchConfig holds fsconsul configuration
 type WatchConfig struct {
 	RunOnce  bool
 	Consul   ConsulConfig
@@ -76,15 +86,55 @@ func watchAndExec(config *WatchConfig) int {
 	return -1
 }
 
+func buildClient(consulConfig ConsulConfig) (*http.Client, error) {
+	tlsConfig := &tls.Config{}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
+	// Check if the user defined a specific CA to use
+	if consulConfig.CAFile != "" {
+		certPool := x509.NewCertPool()
+		if data, err := ioutil.ReadFile(consulConfig.CAFile); err != nil {
+			return nil, err
+		} else if !certPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("Invalid certificate file: %s", consulConfig.CAFile)
+		}
+		tlsConfig.RootCAs = certPool
+	}
+
+	// Check if TLS was configured for client-side verification
+	if consulConfig.CertFile != "" && consulConfig.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(consulConfig.CertFile, consulConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	return client, nil
+}
+
 // Connects to Consul and watches a given K/V prefix and uses that to
 // write to the filesystem.
 func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int, error) {
+	var err error
 
 	consulConfig := config.Consul
 
 	kvConfig := consulapi.DefaultConfig()
 	kvConfig.Address = consulConfig.Addr
 	kvConfig.Datacenter = consulConfig.DC
+	tlsConfig := &tls.Config{}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	kvConfig.HttpClient = &http.Client{Transport: transport}
+
+	// Enforce use of secure connection
+	if consulConfig.UseTLS {
+		kvConfig.Scheme = "https"
+	}
+
+	kvConfig.HttpClient, err = buildClient(consulConfig)
+	if err != nil {
+		return 0, err
+	}
 
 	client, err := consulapi.NewClient(kvConfig)
 	if err != nil {
@@ -152,8 +202,8 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 		// Iterate over all objects in the current env.  If they are not in the newEnv, they
 		// were deleted from Consul and should be deleted from disk.
-		for k, _ := range env {
-			if _, ok := newEnv[k] ; !ok {
+		for k := range env {
+			if _, ok := newEnv[k]; !ok {
 				log.Println("[DEBUG]: key deleted:", k)
 				// Write file to disk
 				keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)

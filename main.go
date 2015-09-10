@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	"github.com/hashicorp/consul-template/logging"
 )
 
@@ -54,10 +55,10 @@ func realMain() int {
 
 	// Setup the logging
 	if err := logging.Setup(&logging.Config{
-		Name:           "fsconsul",
-		Level:          "INFO",
-		Syslog:         false,
-		Writer:         os.Stdout,
+		Name:   "fsconsul",
+		Level:  "INFO",
+		Syslog: false,
+		Writer: os.Stdout,
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "[ERR]: Failed to start logger due to %v.\n", err)
 		return 5
@@ -68,7 +69,6 @@ func realMain() int {
 	args := flag.Args()
 
 	if configFile != "" {
-
 		// Load the configuration from JSON.
 		configBody, err := ioutil.ReadFile(configFile)
 		if err != nil {
@@ -81,11 +81,8 @@ func realMain() int {
 			fmt.Fprintf(os.Stderr, "[ERR]: Failed to parse JSON due to %v\n", err)
 			return 3
 		}
-
 	} else {
-
 		// Build the configuraiton from the command-line
-
 		var onChange []string
 		if len(args) > 2 {
 			onChange = args[2:]
