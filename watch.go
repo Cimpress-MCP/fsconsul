@@ -218,7 +218,15 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 			log.Printf("[INFO]: Successfully wrote %d bytes to %s", wrote, keyfile)
 
-			f.Sync()
+			err = f.Sync()
+			if err != nil {
+				log.Printf("[ERR]: Failed to sync file %s due to %s", keyfile, err)
+			}
+
+			err = f.Close()
+			if err != nil {
+				log.Printf("[ERR]: Failed to close file %s due to %s", keyfile, err)
+			}
 		}
 
 		// Configuration changed, run our onchange command, if one was specified.
