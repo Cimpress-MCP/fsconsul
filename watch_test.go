@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"testing"
 	"time"
@@ -253,5 +254,76 @@ func TestConfigBlobsForDelete(t *testing.T) {
 		if _, err := os.Stat(keyfilePath); os.IsExist(err) {
 			t.Fatalf("Key file still exists even after delete")
 		}
+	}
+}
+var simpleConfigBlob = struct {
+	json, key string
+}{
+	`{
+		"mappings" : [{
+			"onchange": "date",
+			"prefix": "simple_file"
+		}]
+	}`,
+	"killMe",
+}
+
+func countOpenFiles() int {
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof -p %v | grep REG", os.Getpid())).Output()
+	if err != nil {
+		fmt.Println("Failed to get open file count due to ", err)
+		return 100000
+	}
+	fmt.Println(string(out))
+	lines := bytes.Count(out, []byte("\n"))
+	return lines - 1
+}
+
+func TestAgainstLeaks(t *testing.T) {
+
+	var config WatchConfig
+
+	err := json.Unmarshal([]byte(simpleConfigBlob.json), &config)
+
+	key := config.Mappings[0].Prefix + "/" + simpleConfigBlob.key
+
+	tempDir := createTempDir(t)
+
+	if err != nil {
+		t.Fatalf("Failed to parse JSON due to %v", err)
+	}
+
+	// Run the fsconsul listener in the background
+	go func() {
+
+		config.Mappings[0].Path = tempDir + "/"
+
+		rvalue := watchAndExec(&config)
+		if rvalue == -1 {
+			t.Fatalf("Failed to run watchAndExec")
+		}
+
+		if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
+			t.Fatalf("Config path should have trailing spaces stripped")
+		}
+
+	}()
+
+	for i:= 0; i < 100; i++ {
+
+		_ = writeToConsul(t, config.Mappings[0].Prefix, key)
+
+		// Give ourselves a little bit of time for the watcher to read the file
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	deleteKeyFromConsul(t, key)
+
+	openFileCount := countOpenFiles()
+
+	// Validate that number of open files is not bananas.
+	fmt.Printf("There are %d open files\n", openFileCount)
+	if openFileCount > 10 {
+		t.Fatalf("There are %d open files.  That's too damn high.", openFileCount)
 	}
 }

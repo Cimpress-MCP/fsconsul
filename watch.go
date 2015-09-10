@@ -284,14 +284,10 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			var cmd = exec.Command(mappingConfig.OnChange[0], mappingConfig.OnChange[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			// If we are invoking RunOnce, we wait for the command to complete to avoid a
-			// condition where the process exit of fsconsul prematurely kills the child process.
-			var err error
-			if config.RunOnce {
-				err = cmd.Run()
-			} else {
-				err = cmd.Start()
-			}
+			// Always wait for the forked process to exit.  We may wish to revisit this, but I think
+			// it's the safest approach since it avoids a case where rapid key updates DOS a system
+			// by slurping all proc handles.
+			err = cmd.Run()
 
 			if err != nil {
 				return 111, err
