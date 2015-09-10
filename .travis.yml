@@ -12,7 +12,7 @@ before_script:
 - openssl req -subj "/CN=Auth" -config openssl.test.conf -newkey rsa:2048 -keyout /tmp/CA/privkey.pem -new -nodes -out /tmp/CA/ca.cert -x509
 - openssl req -config openssl.test.conf -newkey rsa:2048 -keyout /tmp/agent.key -new -nodes -out /tmp/agent.csr
 - openssl ca -config openssl.test.conf -batch -notext -in /tmp/agent.csr -out /tmp/agent.cert
-- echo '{"ca_file": "/tmp/CA/ca.cert","cert_file": "/tmp/agent.cert","key_file": "/tmp/agent.key","verify_incoming": true,"verify_outgoing": true,"ports": {"https": 8501}}' > "/tmp/tls.json"
+- "echo '{\"ca_file\": \"/tmp/CA/ca.cert\",\"cert_file\": \"/tmp/agent.cert\",\"key_file\": \"/tmp/agent.key\",\"verify_incoming\": true,\"verify_outgoing\": true,\"ports\": {\"https\": 8501}}' > \"/tmp/tls.json\""
 - ./consul agent -server -bootstrap -data-dir=consul_data -config-file=tls.json &
 - sleep 5
 - git config --global user.email "ryan@ryanbreen.com"
