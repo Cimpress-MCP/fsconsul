@@ -15,6 +15,8 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
+const delay = 500 * time.Millisecond
+
 var (
 	sslConsulConfig = ConsulConfig{
 		Addr: "localhost:8501",
@@ -169,7 +171,7 @@ func TestConfigBlobs(t *testing.T) {
 		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, httpConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(delay)
 
 		fileValue, err := ioutil.ReadFile(path.Join(tempDir, test.key))
 		if err != nil {
@@ -214,7 +216,7 @@ func TestConfigBlobsWithTLS(t *testing.T) {
 		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, sslConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(delay)
 
 		fileValue, err := ioutil.ReadFile(path.Join(tempDir, test.key))
 		if err != nil {
@@ -287,7 +289,7 @@ func TestConfigBlobsForDelete(t *testing.T) {
 		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, httpConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(delay)
 
 		keyfilePath := path.Join(tempDir, test.key)
 
@@ -342,7 +344,7 @@ func TestConfigBlobsForDeleteWithTLS(t *testing.T) {
 		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, sslConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(5 * 100 * time.Millisecond)
+		time.Sleep(delay)
 
 		keyfilePath := path.Join(tempDir, test.key)
 
