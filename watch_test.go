@@ -342,7 +342,7 @@ func TestConfigBlobsForDeleteWithTLS(t *testing.T) {
 		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, sslConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(5 * 100 * time.Millisecond)
 
 		keyfilePath := path.Join(tempDir, test.key)
 
