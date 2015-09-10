@@ -6,13 +6,13 @@ before_script:
 - wget  https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip
 - unzip 0.5.0_linux_amd64.zip
 - mkdir consul_data
-- mkdir demoCA && touch demoCA/index.txt && echo "0a" > demoCA/serial
-- openssl req -subj "/C=US/ST=Awesome/L=Awesome/O=Awesome/CN=*.consul" -keyout ca.key.pem -new -x509 -days 30 -nodes -out ca.cert.pem
-- openssl req -subj "/C=US/ST=Awesome/L=Awesome/O=Awesome/CN=*.consul" -keyout server.key.pem -new -nodes -out server.csr.pem
-- openssl ca -batch -outdir . -days 60 -keyfile ca.key.pem -cert ca.cert.pem -notext -in server.csr.pem -out server.cert.pem
-- openssl req -subj "/C=US/ST=Awesome/L=Awesome/O=Awesome/CN=*.consul" -keyout client.key.pem -new -nodes -out client.csr.pem
-- openssl ca -batch -outdir . -days 60 -keyfile ca.key.pem -cert ca.cert.pem -notext -in client.csr.pem -out client.cert.pem
-- echo '{"ca_file": "ca.cert.pem","cert_file": "server.cert.pem","key_file": "server.key.pem","verify_incoming": true,"verify_outgoing": true,"ports": {"https": 8501}}' > tls.json
+- mkdir --parents --verbose /tmp/CA/certs
+- touch /tmp/CA/certindex
+- echo "1000" > /tmp/CA/serial
+- openssl req -subj "/CN=Auth" -config openssl.test.conf -newkey rsa:2048 -keyout /tmp/CA/privkey.pem -new -nodes -out /tmp/CA/ca.cert -x509
+- openssl req -config openssl.test.conf -newkey rsa:2048 -keyout /tmp/agent.key -new -nodes -out /tmp/agent.csr
+- openssl ca -config openssl.test.conf -batch -notext -in /tmp/agent.csr -out /tmp/agent.cert
+- echo '{"ca_file": "/tmp/CA/ca.cert","cert_file": "/tmp/agent.cert","key_file": "/tmp/agent.key","verify_incoming": true,"verify_outgoing": true,"ports": {"https": 8501}}' > "/tmp/tls.json"
 - ./consul agent -server -bootstrap -data-dir=consul_data -config-file=tls.json &
 - sleep 5
 - git config --global user.email "ryan@ryanbreen.com"

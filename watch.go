@@ -113,19 +113,10 @@ func buildClient(consulConfig ConsulConfig) (*http.Client, error) {
 	return client, nil
 }
 
-// Connects to Consul and watches a given K/V prefix and uses that to
-// write to the filesystem.
-func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int, error) {
-	var err error
-
-	consulConfig := config.Consul
-
+func buildConsulClient(consulConfig ConsulConfig) (client *consulapi.Client, err error) {
 	kvConfig := consulapi.DefaultConfig()
 	kvConfig.Address = consulConfig.Addr
 	kvConfig.Datacenter = consulConfig.DC
-	tlsConfig := &tls.Config{}
-	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	kvConfig.HttpClient = &http.Client{Transport: transport}
 
 	// Enforce use of secure connection
 	if consulConfig.UseTLS {
@@ -134,10 +125,20 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 	kvConfig.HttpClient, err = buildClient(consulConfig)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	client, err := consulapi.NewClient(kvConfig)
+	client, err = consulapi.NewClient(kvConfig)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+// Connects to Consul and watches a given K/V prefix and uses that to
+// write to the filesystem.
+func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int, error) {
+	client, err := buildConsulClient(config.Consul)
 	if err != nil {
 		return 0, err
 	}
@@ -173,7 +174,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 	}
 
 	go watch(
-		client, mappingConfig.Prefix, mappingConfig.Path, consulConfig.Token, pairCh, errCh, quitCh)
+		client, mappingConfig.Prefix, mappingConfig.Path, config.Consul.Token, pairCh, errCh, quitCh)
 
 	var env map[string]string
 	for {
