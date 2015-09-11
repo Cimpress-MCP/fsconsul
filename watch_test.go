@@ -44,7 +44,6 @@ func init() {
 	if sslConsul, err = buildConsulClient(sslConsulConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "It was not possible to create consul client: %v\n", err)
 	}
-	fmt.Println(sslConsul.Status().Peers())
 
 	if httpConsul, err = buildConsulClient(httpConsulConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "It was not possible to create consul client: %v\n", err)
