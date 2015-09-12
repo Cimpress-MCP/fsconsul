@@ -268,6 +268,8 @@ var simpleConfigBlob = struct {
 	"killMe",
 }
 
+// TODO: This is platform specific and will only work well on unix.  Not sure how to make this
+// work on Windows.
 func countOpenFiles() int {
 	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof -p %v | grep REG", os.Getpid())).Output()
 	if err != nil {
@@ -279,6 +281,8 @@ func countOpenFiles() int {
 	return lines - 1
 }
 
+// Validate that we are properly closing file and process handles by running 100
+// updates to a key (and thus, 100 file writes and 100 invocations of OnChange).
 func TestAgainstLeaks(t *testing.T) {
 
 	var config WatchConfig
