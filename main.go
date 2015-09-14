@@ -5,15 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/consul-template/logging"
+	"github.com/Sirupsen/logrus"
 )
 
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
 	os.Exit(realMain())
 }
 
@@ -54,17 +54,10 @@ func realMain() int {
 	}
 
 	// Setup the logging
-	if err := logging.Setup(&logging.Config{
-		Name:   "fsconsul",
-		Level:  "INFO",
-		Syslog: false,
-		Writer: os.Stdout,
-	}); err != nil {
-		fmt.Fprintf(os.Stderr, "[ERR]: Failed to start logger due to %v.\n", err)
-		return 5
-	}
+	var log = logrus.New()
+	log.Out = os.Stderr
 
-	log.Printf("[INFO] fsconsul initializing...")
+	log.Info("fsconsul initializing...")
 
 	args := flag.Args()
 
@@ -72,13 +65,17 @@ func realMain() int {
 		// Load the configuration from JSON.
 		configBody, err := ioutil.ReadFile(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERR]: Failed to read config file due to %v\n", err)
+			log.WithFields(logrus.Fields{
+				"error": err,
+			}).Error("Failed to read config file")
 			return 2
 		}
 
 		err = json.Unmarshal(configBody, &config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERR]: Failed to parse JSON due to %v\n", err)
+			log.WithFields(logrus.Fields{
+				"error": err,
+			}).Error("Failed to parse JSON")
 			return 3
 		}
 	} else {
@@ -93,7 +90,7 @@ func realMain() int {
 		var paths = strings.Split(args[1], "|")
 
 		if len(prefixes) != len(paths) {
-			fmt.Fprintf(os.Stderr, "[ERR]: There must be an identical number of prefixes and paths.\n")
+			log.Error("There must be an identical number of prefixes and paths.")
 			return 1
 		}
 
