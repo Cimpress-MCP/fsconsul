@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
 	os.Exit(realMain())
 }
 

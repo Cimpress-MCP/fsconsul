@@ -20,8 +20,7 @@ import (
 )
 
 func init() {
-  // Only log the warning severity or above.
-  log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 }
 
 // ConsulConfig holds the configuration for Consul
