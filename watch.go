@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,6 +18,10 @@ import (
 
 	gosecret "github.com/cimpress-mcp/gosecret/api"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
 
 // ConsulConfig holds the configuration for Consul
 type ConsulConfig struct {
@@ -68,11 +72,15 @@ func watchAndExec(config *WatchConfig) int {
 				mappingConfig.OnChange = strings.Split(mappingConfig.OnChangeRaw, " ")
 			}
 
-			log.Printf("[DEBUG] Got mapping config %v", mappingConfig)
+			log.WithFields(log.Fields{
+				"config": mappingConfig,
+			}).Debug("Got mapping config")
 
 			returnCode, err := watchMappingAndExec(config, mappingConfig)
 			if err != nil {
-				log.Println("[ERR]:", err)
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Debug("Failure from watch function")
 			}
 
 			returnCodes <- returnCode
@@ -81,7 +89,7 @@ func watchAndExec(config *WatchConfig) int {
 
 	// Wait for completion of all forked go routines
 	for i := 0; i < len(config.Mappings); i++ {
-		log.Println(<-returnCodes)
+		log.Debug(<-returnCodes)
 	}
 	return -1
 }
@@ -190,7 +198,9 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 		newEnv := make(map[string]string)
 		for _, pair := range pairs {
-			log.Println("[DEBUG]: key ==", pair.Key)
+			log.WithFields(log.Fields{
+				"key": pair.Key,
+			}).Debug("Key present in source")
 			k := strings.TrimPrefix(pair.Key, mappingConfig.Prefix)
 			k = strings.TrimLeft(k, "/")
 			newEnv[k] = string(pair.Value)
@@ -206,7 +216,9 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 		// were deleted from Consul and should be deleted from disk.
 		for k := range env {
 			if _, ok := newEnv[k]; !ok {
-				log.Println("[DEBUG]: key deleted:", k)
+				log.WithFields(log.Fields{
+					"key": k,
+				}).Debug("Key no longer present locally")
 				// Write file to disk
 				keyfile := fmt.Sprintf("%s%s", mappingConfig.Path, k)
 				if isWindows {
@@ -215,7 +227,9 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 
 				err := os.Remove(keyfile)
 				if err != nil {
-					log.Println("[ERR]: Failed to delete key file", err)
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Failed to remove key")
 				}
 			}
 		}
@@ -234,43 +248,76 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 				// mkdirp the file's path
 				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "\\")], 0777)
 				if err != nil {
-					log.Println("[ERR]: Failed to create parent directory for key", err)
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Failed to create parent directory for key")
 				}
 			} else {
 				// mkdirp the file's path
 				err := mkdirp.Mk(keyfile[:strings.LastIndex(keyfile, "/")], 0777)
 				if err != nil {
-					log.Println("[ERR]: Failed to create parent directory for key", err)
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Failed to create parent directory for key")
 				}
 			}
 
 			f, err := os.Create(keyfile)
 			if err != nil {
-				log.Printf("[ERR]: Failed to create file %s due to %s", keyfile, err)
+				log.WithFields(log.Fields{
+					"error": err,
+					"file": keyfile,
+				}).Error("Failed to create file")
 				continue
 			}
 
 			defer f.Close()
 
-			log.Println("[DEBUG]: Input value length:", len(v))
+			log.WithFields(log.Fields{
+				"length": len(v),
+			}).Debug("Input value length")
 
 			decryptedValue, err := gosecret.DecryptTags([]byte(v), mappingConfig.Keystore)
 			if err != nil {
-				log.Println("[ERR]: Failed to decrypt value due to", err)
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Failed to decrypt value")
 				decryptedValue = []byte(v)
 			}
 
-			log.Println("[DEBUG]: Output length:", len(decryptedValue))
+			log.WithFields(log.Fields{
+				"length": len(decryptedValue),
+			}).Debug("Output value length")
 
 			wrote, err := f.Write(decryptedValue)
 			if err != nil {
-				log.Printf("[ERR]: Failed to write to file %s due to %s", keyfile, err)
+				log.WithFields(log.Fields{
+					"error": err,
+					"file": keyfile,
+				}).Error("Failed to write to file")
 				continue
 			}
 
-			log.Printf("[INFO]: Successfully wrote %d bytes to %s", wrote, keyfile)
+			log.WithFields(log.Fields{
+				"length": wrote,
+				"file": keyfile,
+			}).Debug("Successfully wrote value to file")
 
-			f.Sync()
+			err = f.Sync()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+					"file": keyfile,
+				}).Error("Failed to sync file")
+			}
+
+			err = f.Close()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+					"file": keyfile,
+				}).Error("Failed to close file")
+			}
 		}
 
 		// Configuration changed, run our onchange command, if one was specified.
@@ -278,14 +325,10 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			var cmd = exec.Command(mappingConfig.OnChange[0], mappingConfig.OnChange[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			// If we are invoking RunOnce, we wait for the command to complete to avoid a
-			// condition where the process exit of fsconsul prematurely kills the child process.
-			var err error
-			if config.RunOnce {
-				err = cmd.Run()
-			} else {
-				err = cmd.Start()
-			}
+			// Always wait for the forked process to exit.  We may wish to revisit this, but I think
+			// it's the safest approach since it avoids a case where rapid key updates DOS a system
+			// by slurping all proc handles.
+			err = cmd.Run()
 
 			if err != nil {
 				return 111, err
@@ -342,12 +385,15 @@ func watch(
 
 		if err != nil {
 			// This happens when the connection to the consul agent dies.  Build in a retry by looping after a delay.
-			log.Println("[WARN]: Error communicating with consul agent.")
+			log.Warn("Error communicating with consul agent.")
 			continue
 		}
 
 		pairCh <- pairs
-		log.Printf("[DEBUG]: curIndex: %d lastIndex: %d\n", curIndex, meta.LastIndex)
+		log.WithFields(log.Fields{
+			"curIndex": curIndex,
+			"lastIndex": meta.LastIndex,
+		}).Debug("Potential index update observed")
 		curIndex = meta.LastIndex
 	}
 }
