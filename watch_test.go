@@ -283,6 +283,7 @@ func TestConfigBlobsForDelete(t *testing.T) {
 		}
 	}
 }
+
 var simpleConfigBlob = struct {
 	json, key string
 }{
@@ -340,15 +341,15 @@ func TestAgainstLeaks(t *testing.T) {
 
 	}()
 
-	for i:= 0; i < 100; i++ {
+	for i := 0; i < 100; i++ {
 
-		_ = writeToConsul(t, config.Mappings[0].Prefix, key)
+		_ = writeToConsul(t, config.Mappings[0].Prefix, key, httpConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	deleteKeyFromConsul(t, key)
+	deleteKeyFromConsul(t, key, httpConsul)
 
 	openFileCount := countOpenFiles()
 
