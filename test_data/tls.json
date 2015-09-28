@@ -1,0 +1,10 @@
+{
+    "ca_file": "test_data/ca.cert",
+    "cert_file": "test_data/agent.cert",
+    "key_file": "test_data/agent.key",
+    "verify_incoming": true,
+    "verify_outgoing": true,
+    "ports": {
+        "https": 8501
+    }
+}

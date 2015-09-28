@@ -23,9 +23,9 @@ var (
 		Addr: "localhost:8501",
 		DC:   "dc1",
 
-		KeyFile:  "/tmp/agent.key",
-		CertFile: "/tmp/agent.cert",
-		CAFile:   "/tmp/CA/ca.cert",
+		KeyFile:  "test_data/agent.key",
+		CertFile: "test_data/agent.cert",
+		CAFile:   "test_data/ca.cert",
 		UseTLS:   true,
 	}
 	httpConsulConfig = ConsulConfig{
