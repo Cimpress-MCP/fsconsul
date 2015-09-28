@@ -16,19 +16,45 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-func createRandomBytes(length int) []byte {
-	random_bytes := make([]byte, length)
-	rand.Read(random_bytes)
-	return random_bytes
+const delay = 500 * time.Millisecond
+
+var (
+	sslConsulConfig = ConsulConfig{
+		Addr: "localhost:8501",
+		DC:   "dc1",
+
+		KeyFile:  "test_data/agent.key",
+		CertFile: "test_data/agent.cert",
+		CAFile:   "test_data/ca.cert",
+		UseTLS:   true,
+	}
+	httpConsulConfig = ConsulConfig{
+		Addr: "localhost:8500",
+		DC:   "dc1",
+	}
+)
+
+var (
+	sslConsul  *consulapi.Client
+	httpConsul *consulapi.Client
+)
+
+func init() {
+	var err error
+
+	if sslConsul, err = buildConsulClient(sslConsulConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "It was not possible to create consul client: %v\n", err)
+	}
+
+	if httpConsul, err = buildConsulClient(httpConsulConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "It was not possible to create consul client: %v\n", err)
+	}
 }
 
-func makeConsulClient(t *testing.T) *consulapi.Client {
-	conf := consulapi.DefaultConfig()
-	client, err := consulapi.NewClient(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	return client
+func createRandomBytes(length int) []byte {
+	bytes := make([]byte, length)
+	rand.Read(bytes)
+	return bytes
 }
 
 func createTempDir(t *testing.T) string {
@@ -42,15 +68,13 @@ func createTempDir(t *testing.T) string {
 	return tempDir
 }
 
-func writeToConsul(t *testing.T, prefix, key string) []byte {
-
+func writeToConsul(t *testing.T, prefix, key string, client *consulapi.Client) []byte {
 	token := os.Getenv("TOKEN")
 	dc := os.Getenv("DC")
 	if dc == "" {
 		dc = "dc1"
 	}
 
-	client := makeConsulClient(t)
 	kv := client.KV()
 
 	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
@@ -71,7 +95,7 @@ func writeToConsul(t *testing.T, prefix, key string) []byte {
 	return encodedValue
 }
 
-func deleteKeyFromConsul(t *testing.T, key string) {
+func deleteKeyFromConsul(t *testing.T, key string, client *consulapi.Client) {
 
 	token := os.Getenv("TOKEN")
 	dc := os.Getenv("DC")
@@ -79,7 +103,6 @@ func deleteKeyFromConsul(t *testing.T, key string) {
 		dc = "dc1"
 	}
 
-	client := makeConsulClient(t)
 	kv := client.KV()
 
 	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
@@ -119,50 +142,52 @@ var configBlobs = []struct {
 }
 
 func TestConfigBlobs(t *testing.T) {
+	for _, consul := range []struct {
+		config ConsulConfig
+		client *consulapi.Client
+	}{
+		{sslConsulConfig, sslConsul},
+		{httpConsulConfig, httpConsul},
+	} {
+		for _, test := range configBlobs {
+			var config WatchConfig
+			tempDir := createTempDir(t)
+			err := json.Unmarshal([]byte(test.json), &config)
+			if err != nil {
+				t.Fatalf("Failed to parse JSON due to %v", err)
+			}
+			config.Consul = consul.config
 
-	for _, test := range configBlobs {
+			key := config.Mappings[0].Prefix + "/" + test.key
+			fmt.Println("Starting test with key", key)
 
-		tempDir := createTempDir(t)
+			// Run the fsconsul listener in the background
+			go func() {
+				config.Mappings[0].Path = tempDir + "/"
 
-		var config WatchConfig
+				rvalue := watchAndExec(&config)
+				if rvalue == -1 {
+					t.Fatalf("Failed to run watchAndExec")
+				}
 
-		err := json.Unmarshal([]byte(test.json), &config)
-		if err != nil {
-			t.Fatalf("Failed to parse JSON due to %v", err)
-		}
+				if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
+					t.Fatalf("Config path should have trailing spaces stripped")
+				}
+			}()
 
-		key := config.Mappings[0].Prefix + "/" + test.key
+			encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, consul.client)
 
-		fmt.Println("Starting test with key", key)
+			// Give ourselves a little bit of time for the watcher to read the file
+			time.Sleep(delay)
 
-		// Run the fsconsul listener in the background
-		go func() {
-
-			config.Mappings[0].Path = tempDir + "/"
-
-			rvalue := watchAndExec(&config)
-			if rvalue == -1 {
-				t.Fatalf("Failed to run watchAndExec")
+			fileValue, err := ioutil.ReadFile(path.Join(tempDir, test.key))
+			if err != nil {
+				t.Fatalf("err: %v", err)
 			}
 
-			if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
-				t.Fatalf("Config path should have trailing spaces stripped")
+			if !bytes.Equal(encodedValue, fileValue) {
+				t.Fatal("Unmatched values")
 			}
-
-		}()
-
-		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key)
-
-		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
-
-		fileValue, err := ioutil.ReadFile(path.Join(tempDir, test.key))
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-
-		if !bytes.Equal(encodedValue, fileValue) {
-			t.Fatal("Unmatched values")
 		}
 	}
 }
@@ -198,64 +223,67 @@ var deleteableConfigBlobs = []struct {
 }
 
 func TestConfigBlobsForDelete(t *testing.T) {
+	for _, consul := range []struct {
+		config ConsulConfig
+		client *consulapi.Client
+	}{
+		{sslConsulConfig, sslConsul},
+		{httpConsulConfig, httpConsul},
+	} {
+		for _, test := range deleteableConfigBlobs {
+			var config WatchConfig
+			tempDir := createTempDir(t)
+			err := json.Unmarshal([]byte(test.json), &config)
+			if err != nil {
+				t.Fatalf("Failed to parse JSON due to %v", err)
+			}
+			config.Consul = consul.config
 
-	for _, test := range deleteableConfigBlobs {
+			key := config.Mappings[0].Prefix + "/" + test.key
+			fmt.Println("Starting test with key", key)
 
-		tempDir := createTempDir(t)
+			// Run the fsconsul listener in the background
+			go func() {
+				config.Mappings[0].Path = tempDir + "/"
 
-		var config WatchConfig
+				rvalue := watchAndExec(&config)
+				if rvalue == -1 {
+					t.Fatalf("Failed to run watchAndExec")
+				}
 
-		err := json.Unmarshal([]byte(test.json), &config)
-		if err != nil {
-			t.Fatalf("Failed to parse JSON due to %v", err)
-		}
+				if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
+					t.Fatalf("Config path should have trailing spaces stripped")
+				}
+			}()
 
-		key := config.Mappings[0].Prefix + "/" + test.key
+			encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key, consul.client)
 
-		fmt.Println("Starting test with key", key)
+			// Give ourselves a little bit of time for the watcher to read the file
+			time.Sleep(delay)
 
-		// Run the fsconsul listener in the background
-		go func() {
+			keyfilePath := path.Join(tempDir, test.key)
 
-			config.Mappings[0].Path = tempDir + "/"
-
-			rvalue := watchAndExec(&config)
-			if rvalue == -1 {
-				t.Fatalf("Failed to run watchAndExec")
+			fileValue, err := ioutil.ReadFile(keyfilePath)
+			if err != nil {
+				t.Fatalf("err: %v", err)
 			}
 
-			if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
-				t.Fatalf("Config path should have trailing spaces stripped")
+			if !bytes.Equal(encodedValue, fileValue) {
+				t.Fatal("Unmatched values")
 			}
 
-		}()
+			deleteKeyFromConsul(t, key, consul.client)
 
-		encodedValue := writeToConsul(t, config.Mappings[0].Prefix, key)
+			// Give ourselves a little bit of time for the watcher to delete the file
+			time.Sleep(100 * time.Millisecond)
 
-		// Give ourselves a little bit of time for the watcher to read the file
-		time.Sleep(100 * time.Millisecond)
-
-		keyfilePath := path.Join(tempDir, test.key)
-
-		fileValue, err := ioutil.ReadFile(keyfilePath)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-
-		if !bytes.Equal(encodedValue, fileValue) {
-			t.Fatal("Unmatched values")
-		}
-
-		deleteKeyFromConsul(t, key)
-
-		// Give ourselves a little bit of time for the watcher to delete the file
-		time.Sleep(100 * time.Millisecond)
-
-		if _, err := os.Stat(keyfilePath); os.IsExist(err) {
-			t.Fatalf("Key file still exists even after delete")
+			if _, err := os.Stat(keyfilePath); os.IsExist(err) {
+				t.Fatalf("Key file still exists even after delete")
+			}
 		}
 	}
 }
+
 var simpleConfigBlob = struct {
 	json, key string
 }{
@@ -313,15 +341,15 @@ func TestAgainstLeaks(t *testing.T) {
 
 	}()
 
-	for i:= 0; i < 100; i++ {
+	for i := 0; i < 100; i++ {
 
-		_ = writeToConsul(t, config.Mappings[0].Prefix, key)
+		_ = writeToConsul(t, config.Mappings[0].Prefix, key, httpConsul)
 
 		// Give ourselves a little bit of time for the watcher to read the file
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	deleteKeyFromConsul(t, key)
+	deleteKeyFromConsul(t, key, httpConsul)
 
 	openFileCount := countOpenFiles()
 
