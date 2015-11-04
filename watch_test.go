@@ -146,7 +146,7 @@ func TestConfigBlobs(t *testing.T) {
 		config ConsulConfig
 		client *consulapi.Client
 	}{
-		{sslConsulConfig, sslConsul},
+		//{sslConsulConfig, sslConsul},
 		{httpConsulConfig, httpConsul},
 	} {
 		for _, test := range configBlobs {
@@ -227,7 +227,7 @@ func TestConfigBlobsForDelete(t *testing.T) {
 		config ConsulConfig
 		client *consulapi.Client
 	}{
-		{sslConsulConfig, sslConsul},
+		//{sslConsulConfig, sslConsul},
 		{httpConsulConfig, httpConsul},
 	} {
 		for _, test := range deleteableConfigBlobs {
