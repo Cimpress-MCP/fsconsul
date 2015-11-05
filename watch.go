@@ -282,7 +282,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 				log.WithFields(log.Fields{
 					"error": err,
 				}).Error("Failed to decrypt value")
-				decryptedValue = []byte(v)
+				continue
 			}
 
 			log.WithFields(log.Fields{
