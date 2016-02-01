@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
+	"text/template"
 	"github.com/armed/mkdirp"
 	consulapi "github.com/hashicorp/consul/api"
 
@@ -289,7 +290,32 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 				"length": len(decryptedValue),
 			}).Debug("Output value length")
 
-			wrote, err := f.Write(decryptedValue)
+			data := string(decryptedValue)
+
+			funcs := template.FuncMap{
+				// Template functions
+				"goDecrypt": goDecryptFunc(mappingConfig.Keystore),
+			}
+
+			tmpl, err := template.New("decryption").Funcs(funcs).Parse(data)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Could not parse template")
+				continue
+			}
+
+			// Run the template to verify the output.
+			buff := new(bytes.Buffer)
+			err = tmpl.Execute(buff, nil)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Could not execute template")
+				continue
+			}
+
+			wrote, err := f.Write(buff.Bytes())
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
