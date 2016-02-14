@@ -1,0 +1,8 @@
+#This is a sample configuration file for testing fsconsul decrypt
+
+application.setting.1=something
+application.setting.2=something else
+application.secret.1=Sssshh This is a secret!
+application.secret.2=This is even more secret!
+
+#EOF
