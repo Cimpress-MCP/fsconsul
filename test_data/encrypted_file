@@ -1,0 +1,8 @@
+#This is a sample configuration file for testing fsconsul decrypt
+
+application.setting.1=something
+application.setting.2=something else
+application.secret.1={{goDecrypt "application.secret.1" "3bxdJwjl9EkJb6bqZ5oHGEjr+G9mBvMVvViysOUThCOTr/tvQAvJ1Q==" "AsFkpwx07oaLHjoY" "fsconsul_test_key"}}
+application.secret.2=[gosecret|application.secret.2|S3uKZNpMv3gRYPeIXm6HLFVR+fLzEzu8j68WQ7+/OeGvm3HvAsvDIjM=|EMCkFtxTtxacGR5m|fsconsul_test_key]
+
+#EOF

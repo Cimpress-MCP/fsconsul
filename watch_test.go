@@ -95,6 +95,36 @@ func writeToConsul(t *testing.T, prefix, key string, client *consulapi.Client) [
 	return encodedValue
 }
 
+func writeFileToConsul(t *testing.T, prefix, key string, file string, client *consulapi.Client) []byte {
+	token := os.Getenv("TOKEN")
+	dc := os.Getenv("DC")
+	if dc == "" {
+		dc = "dc1"
+	}
+
+	kv := client.KV()
+
+	writeOptions := &consulapi.WriteOptions{Token: token, Datacenter: dc}
+
+	// Delete all keys in the prefixed KV space
+	if _, err := kv.DeleteTree(prefix, writeOptions); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	fileBytes, err := ioutil.ReadFile(file);
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	p := &consulapi.KVPair{Key: key, Flags: 42, Value: fileBytes}
+
+	if _, err := kv.Put(p, writeOptions); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	return fileBytes
+}
+
+
 func deleteKeyFromConsul(t *testing.T, key string, client *consulapi.Client) {
 
 	token := os.Getenv("TOKEN")
@@ -357,5 +387,76 @@ func TestAgainstLeaks(t *testing.T) {
 	fmt.Printf("There are %d open files\n", openFileCount)
 	if openFileCount > 10 {
 		t.Fatalf("There are %d open files.  That's too damn high.", openFileCount)
+	}
+}
+
+var simpleKeystoreConfigBlob = struct {
+	json, key string
+}{
+	`{
+		"mappings" : [{
+			"onchange": "date",
+			"prefix": "crypt_file",
+			"keystore": "test_data/ks/"
+		}]
+	}`,
+	"decryptTest",
+}
+
+// Write an encrypted file to consul, check resultant fs file for decrypted match
+func TestFileDecryption(t *testing.T) {
+
+	var config WatchConfig
+
+	err := json.Unmarshal([]byte(simpleKeystoreConfigBlob.json), &config)
+
+	key := config.Mappings[0].Prefix + "/" + simpleKeystoreConfigBlob.key
+
+	tempDir := createTempDir(t)
+
+	if err != nil {
+		t.Fatalf("Failed to parse JSON due to %v", err)
+	}
+
+	// Run the fsconsul listener in the background
+	go func() {
+
+		config.Mappings[0].Path = tempDir + "/"
+
+		rvalue := watchAndExec(&config)
+		if rvalue == -1 {
+			t.Fatalf("Failed to run watchAndExec")
+		}
+
+		if config.Mappings[0].Path[len(config.Mappings[0].Path)-1] == 34 {
+			t.Fatalf("Config path should have trailing spaces stripped")
+		}
+
+	}()
+
+	// Read the encrypted mock file and load it into consul so we can verify it matches
+	// the expected decrypted file later when watcher writes on the filesystem.
+	_ = writeFileToConsul(t, config.Mappings[0].Prefix, key, "test_data/encrypted_file", httpConsul)
+
+	// Give ourselves a little bit of time for the watcher to read the file
+	time.Sleep(200 * time.Millisecond)
+
+	keyfilePath := path.Join(tempDir, simpleKeystoreConfigBlob.key)
+
+	// The output we are testing
+	actualFileWritten, err := ioutil.ReadFile(keyfilePath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// The golden version we expect
+	expectedDecyptedFile, err := ioutil.ReadFile("test_data/decrypted_file")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Test passes if they match.
+	if !bytes.Equal(actualFileWritten, expectedDecyptedFile) {
+		t.Fatal("Unmatched values - Decryption may have failed.")
 	}
 }
