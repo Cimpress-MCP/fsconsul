@@ -278,41 +278,46 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 				"length": len(v),
 			}).Debug("Input value length")
 
-			decryptedValue, err := gosecret.DecryptTags([]byte(v), mappingConfig.Keystore)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Error("Failed to decrypt value")
-				continue
-			}
-
-			log.WithFields(log.Fields{
-				"length": len(decryptedValue),
-			}).Debug("Output value length")
-
-			data := string(decryptedValue)
-
-			funcs := template.FuncMap{
-				// Template functions
-				"goDecrypt": goDecryptFunc(mappingConfig.Keystore),
-			}
-
-			tmpl, err := template.New("decryption").Funcs(funcs).Parse(data)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Error("Could not parse template")
-				continue
-			}
-
-			// Run the template to verify the output.
 			buff := new(bytes.Buffer)
-			err = tmpl.Execute(buff, nil)
-			if err != nil {
+			buff.Write([]byte(v))
+
+			if len(mappingConfig.Keystore) > 0 {
+				decryptedValue, err := gosecret.DecryptTags([]byte(v), mappingConfig.Keystore)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Failed to decrypt value")
+					continue
+				}
+
 				log.WithFields(log.Fields{
-					"error": err,
-				}).Error("Could not execute template")
-				continue
+					"length": len(decryptedValue),
+				}).Debug("Output value length")
+
+				data := string(decryptedValue)
+
+				funcs := template.FuncMap{
+					// Template functions
+					"goDecrypt": goDecryptFunc(mappingConfig.Keystore),
+				}
+
+				tmpl, err := template.New("decryption").Funcs(funcs).Parse(data)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Could not parse template")
+					continue
+				}
+
+				// Run the template to verify the output.
+				buff = new(bytes.Buffer)
+				err = tmpl.Execute(buff, nil)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Could not execute template")
+					continue
+				}
 			}
 
 			wrote, err := f.Write(buff.Bytes())
