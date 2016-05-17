@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
-	"time"
 	"text/template"
+	"time"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/armed/mkdirp"
 	consulapi "github.com/hashicorp/consul/api"
 
@@ -89,10 +90,20 @@ func watchAndExec(config *WatchConfig) int {
 	}
 
 	// Wait for completion of all forked go routines
+	failures := false
 	for i := 0; i < len(config.Mappings); i++ {
-		log.Debug(<-returnCodes)
+		returnCode := <-returnCodes
+		log.Debug(returnCode)
+		if returnCode != 0 {
+			failures = true
+		}
 	}
-	return -1
+
+	if failures {
+		return -1
+	}
+
+	return 0
 }
 
 func buildClient(consulConfig ConsulConfig) (*http.Client, error) {
@@ -267,7 +278,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-					"file": keyfile,
+					"file":  keyfile,
 				}).Error("Failed to create file")
 				continue
 			}
@@ -324,21 +335,21 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-					"file": keyfile,
+					"file":  keyfile,
 				}).Error("Failed to write to file")
 				continue
 			}
 
 			log.WithFields(log.Fields{
 				"length": wrote,
-				"file": keyfile,
+				"file":   keyfile,
 			}).Debug("Successfully wrote value to file")
 
 			err = f.Sync()
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-					"file": keyfile,
+					"file":  keyfile,
 				}).Error("Failed to sync file")
 			}
 
@@ -346,7 +357,7 @@ func watchMappingAndExec(config *WatchConfig, mappingConfig *MappingConfig) (int
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
-					"file": keyfile,
+					"file":  keyfile,
 				}).Error("Failed to close file")
 			}
 		}
@@ -422,7 +433,7 @@ func watch(
 
 		pairCh <- pairs
 		log.WithFields(log.Fields{
-			"curIndex": curIndex,
+			"curIndex":  curIndex,
 			"lastIndex": meta.LastIndex,
 		}).Debug("Potential index update observed")
 		curIndex = meta.LastIndex
