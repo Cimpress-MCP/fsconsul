@@ -1,4 +1,5 @@
 language: go
+dist: trusty
 sudo: false
 go:
 - 1.8.x
