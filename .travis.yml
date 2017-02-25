@@ -14,6 +14,7 @@ before_script:
 script:
 - go test
 after_success:
+- kill %1
 - test ! $TRAVIS_TAG && exit
 - go get -x github.com/mitchellh/gox
 - gox -build-toolchain -osarch="linux/amd64 darwin/amd64 windows/amd64"
